@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.2021.10.28"
-#__version__ = "0.2021.10.28"
+__version__ = "0.2021.10.29"
+#__version__ = "0.2021.10.29"
 ##Animator
 #import FreeCAD, FreeCADGui, Part
 #import time
@@ -31,8 +31,10 @@ __version__ = "0.2021.10.28"
 #        obj.Proxy = self
 #
 #    def getSubProperties(self,prop,typeId,obj):
-#        if not "Placement" in typeId and not "Vector" in typeId and not "Matrix" in typeId and not "ConstraintList" in typeId and not "Spreadsheet::Sheet" in typeId:
+#        if not "Placement" in typeId and not "Vector" in typeId and not "Matrix" in typeId and not "ConstraintList" in typeId and not "Spreadsheet::Sheet" in typeId and not "Rotation" in typeId:
 #            return [prop]
+#        elif "Rotation" in typeId:
+#            return [prop+".Angle",prop+".Axis.x",prop+".Axis.y",prop+".Axis.z"]
 #        elif "Placement" in typeId:
 #            return [prop+".Rotation.Angle",prop+".Rotation.Axis.x",prop+".Rotation.Axis.y",prop+".Rotation.Axis.z",prop+".Base.x",prop+".Base.y",prop+".Base.z"]
 #        elif "Vector" in typeId:
