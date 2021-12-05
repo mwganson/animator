@@ -11,6 +11,10 @@ Not yet available in the Addon Manager.  Install by copying the Animator.FCMacro
 Like all feature python objects the Animator objects are controlled largely by editing their properties in the property view.  Some of the boolean properties act as triggers for commands.  When toggling a trigger from False to True the command is executed and the trigger sets itself back to False, awaiting the next trigger.
 
 ## Animator section
+### A2Plus Solve (boolean)
+### Asm3 Solve (boolean)
+### Asm4 Solve (boolean)
+Executes the Assembly workbench solver each step through the loop if True.  Be sure to have opened the assembler workbench at least once during the sesssion so the command is loaded into FreeCAD or else the macro will fail.
 ### Frames (integer)
 Default: 100.  This is how many frames / iterations there will be in the animation loop.  Internally a counter begins at 1 and is incremented by 1 each time through the loop.   The animation ends with the counter reaches 100 or if the user double clicks the Animator object or toggles Stop Animation property to True.
 ### Initial Delay (float constraint)
