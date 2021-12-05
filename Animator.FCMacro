@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.2021.10.29"
-#__version__ = "0.2021.10.29"
+__version__ = "0.2021.12.04"
+#__version__ = "0.2021.12.04"
 ##Animator
 #import FreeCAD, FreeCADGui, Part
 #import time
@@ -9,6 +9,9 @@ __version__ = "0.2021.10.29"
 #class Animator:
 #    def __init__(self, obj):
 #        animv = "Animator.v"+__version__
+#        obj.addProperty("App::PropertyBool","A2PlusSolve",animv,"Be sure to open A2Plus workbench first.  Executes solve command each step in the loop").A2PlusSolve = False
+#        obj.addProperty("App::PropertyBool","Asm3Solve",animv,"Be sure to open Assembly 3 workbench first.  Executes solve command each step in the loop").Asm3Solve = False
+#        obj.addProperty("App::PropertyBool","Asm4Solve",animv,"Be sure to open Assembly 4 workbench first.  Executues solve command each step in the loop").Asm4Solve = False
 #        obj.addProperty("App::PropertyBool","ShowProgress",animv,"Whether to show progress in Description/Label2 column during animation").ShowProgress = True
 #        obj.addProperty("App::PropertyBool","StartAnimating",animv,"[Trigger] Start animating (or double click Animator in tree)").StartAnimating = False
 #        obj.addProperty("App::PropertyBool","StopAnimating",animv,"[Trigger] Stop animating (or double click Animator in tree)").StopAnimating = False
@@ -95,6 +98,12 @@ __version__ = "0.2021.10.29"
 #                        self.setProperty(fp,variables[jj][0],variables[jj][1] + variables[jj][2] * counter)
 #            if fp.ShowProgress:
 #                fp.Label2 = str(counter)+"/"+str(fp.Frames)
+#            if fp.A2PlusSolve:
+#                FreeCADGui.runCommand('a2p_SolverCommand',0)
+#            if fp.Asm3Solve:
+#                FreeCADGui.runCommand('asm3CmdSolve',0)
+#            if fp.Asm4Solve:
+#                FreeCADGui.runCommand('Asm4_updateAssembly',0)
 #            FreeCADGui.updateGui()
 #            time.sleep(fp.Sleep)
 #            counter += 1
