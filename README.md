@@ -16,7 +16,7 @@ Like all feature python objects the Animator objects are controlled largely by e
 ### Asm4 Solve (boolean)
 Executes the Assembly workbench solver each step through the loop if True.  Be sure to have opened the assembler workbench at least once during the sesssion so the command is loaded into FreeCAD or else the macro will fail.
 ### A2PlusConstraints (stringlist)
-List of found A2Plus constraints in the current document.  You might need to toggle Refresh to update from time to time if new constraints are added.  Put a python style comment character pound (#) as first character of line to not solve that constraint (or you may also just delete it from the list).  New constraints may be typed in, but ensure the spelling is exactly correct.
+List of found A2Plus constraints in the current document.  You might need to toggle Refresh to update from time to time if new constraints are added.  Put a python style comment character pound (#) as first character of line to not solve that constraint (or you may also just delete it from the list).  New constraints may be typed in, but ensure the spelling is exactly correct.  Note: [] empty list means solve all constraints.
 ### A2PlusRefreshConstraints (bool)
 If True, when Refresh is toggled, then the A2Plus constraints will also be updated.  (Warning: this will overwrite any python style comments on any of the lines.)  Set this to False if you want to refresh the other variables in the document, but not the A2Plus Constraints.
 ### Frames (integer)
