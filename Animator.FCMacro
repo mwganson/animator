@@ -1,23 +1,34 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.2022.01.10"
-#__version__ = "0.2022.01.10"
-##Animator
+__version__ = "0.2022.03.07"
+#__version__ = "0.2022.03.07"
+##Animator, 2022, by <TheMarkster>, LGPL2.1 or later
+##Credit to Dan Miel for some of the A2Plus-related stuff
 #import FreeCAD, FreeCADGui, Part
 #import time
 #from pivy import coin
 #from PySide import QtCore, QtGui
+#try:
+#    import a2p_solversystem
+#    a2p_present = True
+#except:
+#    a2p_present = False
+#    pass
 #class Animator:
 #    def __init__(self, obj):
 #        animv = "Animator.v"+__version__
 #        obj.addProperty("App::PropertyBool","A2PlusSolve",animv,"Be sure to open A2Plus workbench first.  Executes solve command each step in the loop").A2PlusSolve = False
+#        obj.addProperty("App::PropertyStringList","A2PlusConstraints",animv,"List of A2Plus constraints to solve, solve all if blank\nPut # in front of those to ignore")
+#        obj.addProperty("App::PropertyBool","A2PlusRefreshConstraints",animv,"Refresh A2PlusConstraints will all constraints in document on Refresh, if True").A2PlusRefreshConstraints=True
 #        obj.addProperty("App::PropertyBool","Asm3Solve",animv,"Be sure to open Assembly 3 workbench first.  Executes solve command each step in the loop").Asm3Solve = False
 #        obj.addProperty("App::PropertyBool","Asm4Solve",animv,"Be sure to open Assembly 4 workbench first.  Executues solve command each step in the loop").Asm4Solve = False
 #        obj.addProperty("App::PropertyBool","ShowProgress",animv,"Whether to show progress in Description/Label2 column during animation").ShowProgress = True
 #        obj.addProperty("App::PropertyBool","StartAnimating",animv,"[Trigger] Start animating (or double click Animator in tree)").StartAnimating = False
 #        obj.addProperty("App::PropertyBool","StopAnimating",animv,"[Trigger] Stop animating (or double click Animator in tree)").StopAnimating = False
+#        obj.addProperty("App::PropertyBool","ResetAfterAnimation",animv,"Reset animated properties back to initial values after the animation is done\n\
+#You may use Undo after the animation to manually reset the values if this is False.").ResetAfterAnimation = True
 #        obj.addProperty("App::PropertyBool","Refresh",animv,"[Trigger] Refreshes Variables property lists, sets self back to False\nUse this if objects/properties have changed").Refresh = False
 #        obj.addProperty("App::PropertyInteger","Frames",animv,"Number of frames / iterations per loop").Frames = 100
-#        obj.addProperty("App::PropertyFloat","Sleep",animv,"Optional sleep time (in seconds) per frame / iteration").Sleep = 0
+#        obj.addProperty("App::PropertyFloatConstraint","Sleep",animv,"Optional sleep time (in seconds) per frame / iteration").Sleep = (0,0,float("inf"),.1)
 #        obj.addProperty("App::PropertyFloatConstraint","InitialDelay",animv,"Initial delay (in seconds) before animation starts").InitialDelay = (0,-.045,60,.1)
 #        obj.addProperty("App::PropertyIntegerConstraint","VariableCount",animv,"Number of variables to use").VariableCount = (3,0,100,1)
 #        obj.addProperty("App::PropertyStringList","BlacklistedObjects","SettingsAdvanced","Object types not to include in Properties").BlacklistedObjects =\
@@ -37,9 +48,9 @@ __version__ = "0.2022.01.10"
 #        if not "Placement" in typeId and not "Vector" in typeId and not "Matrix" in typeId and not "ConstraintList" in typeId and not "Spreadsheet::Sheet" in typeId and not "Rotation" in typeId:
 #            return [prop]
 #        elif "Rotation" in typeId:
-#            return [prop+".Angle",prop+".Axis.x",prop+".Axis.y",prop+".Axis.z"]
+#            return [prop+".Angle",prop+".Axis.x",prop+".Axis.y",prop+".Axis.z",prop+".Roll",prop+".Pitch",prop+".Yaw"]
 #        elif "Placement" in typeId:
-#            return [prop+".Rotation.Angle",prop+".Rotation.Axis.x",prop+".Rotation.Axis.y",prop+".Rotation.Axis.z",prop+".Base.x",prop+".Base.y",prop+".Base.z"]
+#            return [prop+".Rotation.Angle",prop+".Rotation.Axis.x",prop+".Rotation.Axis.y",prop+".Rotation.Axis.z",prop+".Rotation.Pitch",prop+".Rotation.Yaw",prop+".Rotation.Roll",prop+".Base.x",prop+".Base.y",prop+".Base.z"]
 #        elif "Vector" in typeId:
 #            return [prop+".x",prop+".y",prop+".z"]
 #        elif "Matrix" in typeId:
@@ -60,6 +71,8 @@ __version__ = "0.2022.01.10"
 #        if prop == "Refresh" and fp.Refresh:
 #            fp.Refresh = False
 #            self.setupVariables(fp) #calls refresh()
+#            if hasattr(fp,"A2PlusRefreshConstraints") and fp.A2PlusRefreshConstraints:
+#                self.setupA2PlusConstraints(fp)
 #        elif prop == "VariableCount":
 #            self.setupVariables(fp)
 #        elif prop == "StartAnimating" and fp.StartAnimating:
@@ -90,6 +103,11 @@ __version__ = "0.2022.01.10"
 #                self.saveExpressions(fp,obj)
 #        counter = 1
 #        oldLabel2 = fp.Label2
+#        if hasattr(fp,"A2PlusConstraints") and fp.A2PlusSolve:
+#            uncommented = [con for con in fp.A2PlusConstraints if con[0] != "#"]
+#            runlist = [fp.Document.getObject(con) for con in uncommented]
+#            FreeCAD.Console.PrintMessage(f"Animator: using these constraints: {uncommented}"+chr(10))
+#        fp.Document.openTransaction("Reset animated objects")
 #        while (counter <= fp.Frames and not fp.StopAnimating):
 #            for jj in range(1,fp.VariableCount+1):
 #                if variables[jj][0] != "Select Property":
@@ -99,7 +117,11 @@ __version__ = "0.2022.01.10"
 #            if fp.ShowProgress:
 #                fp.Label2 = str(counter)+"/"+str(fp.Frames)
 #            if fp.A2PlusSolve:
-#                FreeCADGui.runCommand('a2p_SolverCommand',0)
+#                if not hasattr(fp,"A2PlusConstraints") or len(fp.A2PlusConstraints) == 0:
+#                    FreeCADGui.runCommand('a2p_SolverCommand',0)
+#                else: #run only selected constraints
+#                    if a2p_present:
+#                        a2p_solversystem.solveConstraints(fp.Document, None, False, matelist = runlist, showFailMessage=False)
 #            if fp.Asm3Solve:
 #                FreeCADGui.runCommand('asm3CmdSolve',0)
 #            if fp.Asm4Solve:
@@ -107,11 +129,20 @@ __version__ = "0.2022.01.10"
 #            FreeCADGui.updateGui()
 #            time.sleep(fp.Sleep)
 #            counter += 1
+#        fp.Document.commitTransaction()
+#        if hasattr(fp,"ResetAfterAnimation") and fp.ResetAfterAnimation:
+#            fp.Document.undo()
 #        fp.StopAnimating = False
 #        self.isAnimating = False
 #        self.restoreExpressions(fp)
 #        fp.Label2 = oldLabel2
 #        FreeCAD.ActiveDocument.recompute()
+#
+#    def setupA2PlusConstraints(self,fp):
+#        if not a2p_present:
+#            return
+#        constraints = [obj.Name for obj in fp.Document.Objects if "ConstraintInfo" in obj.Content and not "mirror" in obj.Name]
+#        fp.A2PlusConstraints = constraints
 #
 #    def setupVariables(self,fp):
 #        self.refresh(fp)
@@ -434,6 +465,7 @@ def makeObject(FP):
     FP.Animator(fp)
     FP.AnimatorVP(fp.ViewObject)
     fp.Proxy.setupVariables(fp)
+    fp.Proxy.setupA2PlusConstraints(fp)
 
 
 #################
