@@ -15,6 +15,10 @@ Like all feature python objects the Animator objects are controlled largely by e
 ### Asm3 Solve (boolean)
 ### Asm4 Solve (boolean)
 Executes the Assembly workbench solver each step through the loop if True.  Be sure to have opened the assembler workbench at least once during the sesssion so the command is loaded into FreeCAD or else the macro will fail.
+### A2PlusConstraints (stringlist)
+List of found A2Plus constraints in the current document.  You might need to toggle Refresh to update from time to time if new constraints are added.  Put a python style comment character pound (#) as first character of line to not solve that constraint (or you may also just delete it from the list).  New constraints may be typed in, but ensure the spelling is exactly correct.
+### A2PlusRefreshConstraints (bool)
+If True, when Refresh is toggled, then the A2Plus constraints will also be updated.  (Warning: this will overwrite any python style comments on any of the lines.)  Set this to False if you want to refresh the other variables in the document, but not the A2Plus Constraints.
 ### Frames (integer)
 Default: 100.  This is how many frames / iterations there will be in the animation loop.  Internally a counter begins at 1 and is incremented by 1 each time through the loop.   The animation ends with the counter reaches 100 or if the user double clicks the Animator object or toggles Stop Animation property to True.
 ### Initial Delay (float constraint)
@@ -48,6 +52,10 @@ These are the objects that will not appear in the VariableNNN property lists.  B
 ### Supported (string list)
 These are the supported properties.  You may add another property type to the list to add support for it, but if the new property type has subproperties, then it will not function correctly.  Ping me on the forum <TheMarkster> and I will see about adding the new support for the new property type for you.  Other than that, the new property should (hopefully) work just by adding it.  Just remember it must be something that will accept incrementing by a floating point value.  You can test this in the python console by entering:  obj.setExpression("PropertyName","0.1") where obj is the object containing the property, "PropertyName" is the name of the property, and "0.1" is the value you wish to set it to.  If this works, then adding the property type to the Supported list should also work.  To determine the property type, right click on the property and select Show All from the context menu.  Then hover your mouse over the property name to see the tooltip showing it's property name, usually something like "App::PropertyFloat."
 ## ChangeLog
+* 0.2022.03.07<br/>
+** Add support for A2Plus constraints, individually disabling/enabling during A2PlusSolve<br/>
+** Add support for Yaw, Pitch, and Roll placement.rotation properties<br/>
+** Add Undo support to put model back to where it was when animation first began<br/>
 * 0.2022.01.10 == Always use Placement and Attachment Offset properties even when hidden
 * 0.2021.10.29 == Support for new property type: "Rotation"
 * 0.2021.10.28 == initial upload
