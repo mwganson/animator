@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.2022.03.07"
-#__version__ = "0.2022.03.07"
+__version__ = "0.2022.06.04"
+#__version__ = "0.2022.06.04"
 ##Animator, 2022, by <TheMarkster>, LGPL2.1 or later
 ##Credit to Dan Miel for some of the A2Plus-related stuff
 #import FreeCAD, FreeCADGui, Part
