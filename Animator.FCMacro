@@ -109,6 +109,7 @@ __version__ = "0.2022.03.07"
 #            FreeCAD.Console.PrintMessage(f"Animator: using these constraints: {uncommented}"+chr(10))
 #        fp.Document.openTransaction("Reset animated objects")
 #        while (counter <= fp.Frames and not fp.StopAnimating):
+#            QtGui.QApplication.instance().processEvents()
 #            for jj in range(1,fp.VariableCount+1):
 #                if variables[jj][0] != "Select Property":
 #                    nth = counter % variables[jj][3] #remainder of dividing counter by Nth property
