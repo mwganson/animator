@@ -45,6 +45,29 @@ Default: 1.  This means increment the property every Frame through the loop.  A 
 Default: 0.  The starting value for an animated property.  When the animation begins the property is set to this value at the beginning of the loop.  Note: properties are not reset to their original values after the animation is complete.  The objects remain at their position occupied in the final Frame except for properties that have been set with expressions.  For example, a Cylinder Height property might be set with an expression = 2 * Radius so that its Height is always 2 * its Radius.  If you elect to animate the Height property it will animate with the values it is set to by the Animator object during the loop.  Then at the end of the loop it reverts to its former Height of 2 * Radius, whatever the current Radius is.  If the Height is not set with an expression, then it retains the Height it had in the final Frame of the loop.  Set properties with expressions if you want them to revert.  An expression can also just be a number, like by pressing = and then entering 10 in the dialog.
 ### VariableNNN Step (float)
 Default: 1.0.  The amount by which to increment or decrement the animated property each Frame.  Use a negative value if you wish to decrement.  For example, to rotate an object from 45 degrees to 15 degrees you would set the Start property to 45, the Step property to -1, and the Frames property to 30.  Alternatively, you could set Step to -0.5 and Frames to 60 to do this in 0.5 degree increments.
+## Run Macro
+Here we have properties related to the feature of allowing to run an arbitrary macro file each frame of the animation.  This is obviously a security risk, so the user is required to give permission each time the animation is started.  This permission dialog can be bypassed by starting the animation from the python console and passing a value of True to the function.  Select the animator icon in the tree, press Ctrl+Shift+P.  Then in the python console enter<br/>
+<br/>
+<pre>
+obj.Proxy.startAnimating(True)
+</pre><br/>
+<br/>
+Note: Even bypassing it in this manner still requires user permission in the dialog at least 1 time per session.
+
+The file to be run is the file path and name held in the Macro File property.  It must contain valid python code.  It can have any extension, such as .py or .FCMacro or .txt.  The file is loaded into memory when the animation begins, then this in-memory string is what is executed each time through the loop.  For each frame the macro is being run anew, so it can't store local variables in memory as you normally would.  For persistent variables put them in the FreeCAD namespace.  Example:
+<pre>
+if not hasattr(FreeCAD, "MyVariable"):
+    FreeCAD.MyVariable = 1
+FreeCAD.MyVariable += 1
+print (FreeCAD.MyVariable)
+</pre>
+
+Now you have access to FreeCAD.MyVariable each time through the loop.
+
+### Run Macro (boolean)
+Default: True.  Set to False if you don't want the macro file to be executed each frame during the loop.
+### Macro File (File)
+This is the file to be executed each frame of the animation.
 ## Settings Advanced section
 Here we have a few advanced settings you will not normally need to change.
 ### Blacklisted Objects (string list)
@@ -52,6 +75,9 @@ These are the objects that will not appear in the VariableNNN property lists.  B
 ### Supported (string list)
 These are the supported properties.  You may add another property type to the list to add support for it, but if the new property type has subproperties, then it will not function correctly.  Ping me on the forum <TheMarkster> and I will see about adding the new support for the new property type for you.  Other than that, the new property should (hopefully) work just by adding it.  Just remember it must be something that will accept incrementing by a floating point value.  You can test this in the python console by entering:  obj.setExpression("PropertyName","0.1") where obj is the object containing the property, "PropertyName" is the name of the property, and "0.1" is the value you wish to set it to.  If this works, then adding the property type to the Supported list should also work.  To determine the property type, right click on the property and select Show All from the context menu.  Then hover your mouse over the property name to see the tooltip showing it's property name, usually something like "App::PropertyFloat."
 ## ChangeLog
+* 0.2023.09.03<br/>
+** fix bug where if user forgot to select a property to animate the animation no longer worked even after selecting a property
+** add feature to run arbitrary macro file during each frame of the animation
 * 0.2022.06.04<br/>
 ** accept PR from m1pro to add extra call to process events at start of animation loop <br/>
 ** fixes issue with link branch <br/>
