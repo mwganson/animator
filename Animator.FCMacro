@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.2022.06.04"
-#__version__ = "0.2022.06.04"
-##Animator, 2022, by <TheMarkster>, LGPL2.1 or later
+__version__ = "0.2023.09.03"
+#__version__ = "0.2023.09.03"
+##Animator, 2023, by <TheMarkster>, LGPL2.1 or later
 ##Credit to Dan Miel for some of the A2Plus-related stuff
+#DEBUG = False
 #import FreeCAD, FreeCADGui, Part
 #import time
 #from pivy import coin
@@ -16,6 +17,8 @@ __version__ = "0.2022.06.04"
 #class Animator:
 #    def __init__(self, obj):
 #        animv = "Animator.v"+__version__
+#        obj.addProperty("App::PropertyBool","RunMacro","RunMacro","Whether to execute code contained in MacroFile each time through loop").RunMacro=True
+#        obj.addProperty("App::PropertyFile","MacroFile","RunMacro","Macro file to execute each time through the loop")
 #        obj.addProperty("App::PropertyBool","A2PlusSolve",animv,"Be sure to open A2Plus workbench first.  Executes solve command each step in the loop").A2PlusSolve = False
 #        obj.addProperty("App::PropertyStringList","A2PlusConstraints",animv,"List of A2Plus constraints to solve, solve all if blank\nPut # in front of those to ignore")
 #        obj.addProperty("App::PropertyBool","A2PlusRefreshConstraints",animv,"Refresh A2PlusConstraints will all constraints in document on Refresh, if True").A2PlusRefreshConstraints=True
@@ -42,6 +45,8 @@ __version__ = "0.2022.06.04"
 #        self.fpName = obj.Name
 #        self.isAnimating = False
 #        self.expressionDict = {} #to hold objects' initial ExpressionEngine before animation
+#        self.stringToRun = ""
+#        self.macroPermissions = 0 #you have to giver permission at least once each session
 #        obj.Proxy = self
 #
 #    def getSubProperties(self,prop,typeId,obj):
@@ -67,6 +72,9 @@ __version__ = "0.2022.06.04"
 #            FreeCAD.Console.PrintMessage(str(aliases)+"\n")
 #            return aliases
 #
+#    def onDocumentRestored(self, obj):
+#        self.macroPermissions = 0 #require permission at least once per session
+#
 #    def onChanged(self, fp, prop):
 #        if prop == "Refresh" and fp.Refresh:
 #            fp.Refresh = False
@@ -81,10 +89,69 @@ __version__ = "0.2022.06.04"
 #            t.singleShot(50+fp.InitialDelay*1000, self.startAnimating) #avoid warning message about selection changing while committing data
 #        elif "Variable" in prop and not bool("Count" in prop or "Nth" in prop or "Start" in prop or "Step" in prop):
 #            self.checkAndWarnAliases(fp,prop)
+#        elif "MacroFile" in prop and fp.MacroFile:
+#            self.readMacroFile(fp)
 #
-#    def startAnimating(self):
+#    def readMacroFile(self,fp):
+#        if DEBUG:
+#            print("reading macro file")
+#        import os
+#        if not fp.MacroFile:
+#            self.stringToRun = ""
+#            return
+#        fin = open(fp.MacroFile, 'r')
+#        self.stringToRun = fin.read()
+#        fin.close()
+#
+#    def runString(self):
+#        if DEBUG:
+#            print ("running macro file...")
+#        macro_string = self.stringToRun
+#        import sys, importlib
+#        my_name = 'my_macro'
+#        my_spec = importlib.util.spec_from_loader(my_name, loader=None)   
+#        my_macro = importlib.util.module_from_spec(my_spec)
+#        import FreeCAD, FreeCADGui
+#        my_macro.FreeCAD = FreeCAD
+#        my_macro.App = FreeCAD
+#        my_macro.Gui = FreeCADGui
+#        my_macro.FreeCADGui = FreeCADGui
+#        try:
+#            exec(macro_string, my_macro.__dict__)
+#        except Exception as e:
+#            FreeCAD.Console.PrintError(f"Animator: error running script: {e}\n")
+#            self.isAnimating = False
+#            raise
+#
+#    def getPermissionFromUser(self,fp):
+#        msgBox = QtGui.QMessageBox()
+#        msgBox.setWindowTitle("Animator Macro Security Warning")
+#        msgBox.setIcon(QtGui.QMessageBox.Warning)
+#        msgBox.setText("Warning: The following file will be executed: " + fp.MacroFile)
+#        info = "Do you want to execute the contents of this file?\n\n"
+#        info += "Note: if Reset After Animation is True (the default) any document objects "
+#        info += "created by the macro will be removed after animation is complete.\n\n"
+#        info += "These objects can be restored using Redo in FreeCAD (Ctrl + Y).\n"
+#        msgBox.setInformativeText(info) 
+#        msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+#        msgBox.setDefaultButton(QtGui.QMessageBox.No)
+#        ret = msgBox.exec();
+#        if ret == QtGui.QMessageBox.Yes:
+#            self.macroPermissions += 1
+#        else: #permission denied
+#            self.macroPermissions = 0
+#        return ret == QtGui.QMessageBox.Yes
+#
+#    def startAnimating(self, skip_permission = False):
 #        self.isAnimating = True
 #        fp = FreeCAD.ActiveDocument.getObject(self.fpName)
+#        if fp.RunMacro and fp.MacroFile:
+#            self.readMacroFile(fp)
+#            if not skip_permission or self.macroPermissions == 0:
+#                if not self.getPermissionFromUser(fp):
+#                    FreeCAD.Console.PrintWarning("Animator: Animation was canceled by user.\n")
+#                    self.isAnimating = False
+#                    return
 #        variables = {} #tuple ii:(prop,start,step)
 #        animated = 0
 #        for ii in range(1,fp.VariableCount+1):
@@ -94,6 +161,7 @@ __version__ = "0.2022.06.04"
 #                animated += 1
 #        if animated == 0:
 #            FreeCAD.Console.PrintError("No properties to animate.  Select some properties and try again.\n")
+#            self.isAnimating = False
 #            return
 #        else:
 #            for k,v in variables.items(): #save obj.ExpressionEngine for each obj in self.expressionsDict
@@ -127,6 +195,8 @@ __version__ = "0.2022.06.04"
 #                FreeCADGui.runCommand('asm3CmdSolve',0)
 #            if fp.Asm4Solve:
 #                FreeCADGui.runCommand('Asm4_updateAssembly',0)
+#            if fp.RunMacro and self.stringToRun:
+#                self.runString()
 #            FreeCADGui.updateGui()
 #            time.sleep(fp.Sleep)
 #            counter += 1
