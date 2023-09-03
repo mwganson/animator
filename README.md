@@ -64,6 +64,13 @@ print (FreeCAD.MyVariable)
 
 Now you have access to FreeCAD.MyVariable each time through the loop.
 
+There is a variable available to the macro file called AnimatorLastFrame.  This is a boolean variable set to True when the macro is being called in the final frame of the animation.  It need not be defined in the macro code before being accessed:
+
+<pre>
+if AnimatorLastFrame:
+    print("This is the final frame in the animation.")
+</pre>
+
 ### Run Macro (boolean)
 Default: True.  Set to False if you don't want the macro file to be executed each frame during the loop.
 ### Macro File (File)
@@ -75,6 +82,8 @@ These are the objects that will not appear in the VariableNNN property lists.  B
 ### Supported (string list)
 These are the supported properties.  You may add another property type to the list to add support for it, but if the new property type has subproperties, then it will not function correctly.  Ping me on the forum <TheMarkster> and I will see about adding the new support for the new property type for you.  Other than that, the new property should (hopefully) work just by adding it.  Just remember it must be something that will accept incrementing by a floating point value.  You can test this in the python console by entering:  obj.setExpression("PropertyName","0.1") where obj is the object containing the property, "PropertyName" is the name of the property, and "0.1" is the value you wish to set it to.  If this works, then adding the property type to the Supported list should also work.  To determine the property type, right click on the property and select Show All from the context menu.  Then hover your mouse over the property name to see the tooltip showing it's property name, usually something like "App::PropertyFloat."
 ## ChangeLog
+# 0.2023.09.03b<br/>
+** add AnimatorLastFrame boolean variable to context of macro file
 * 0.2023.09.03<br/>
 ** fix bug where if user forgot to select a property to animate the animation no longer worked even after selecting a property
 ** add feature to run arbitrary macro file during each frame of the animation
