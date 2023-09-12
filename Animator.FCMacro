@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.2023.09.12"
-#__version__ = "0.2023.09.12"
+__version__ = "0.2023.09.12b"
+#__version__ = "0.2023.09.12b"
 ##Animator, 2023, by <TheMarkster>, LGPL2.1 or later
 ##Credit to Dan Miel for some of the A2Plus-related stuff
 #DEBUG = False
@@ -30,6 +30,8 @@ __version__ = "0.2023.09.12"
 #class Animator:
 #    def __init__(self, obj):
 #        animv = "Animator.v"+__version__
+#        obj.addProperty("App::PropertyFloat","ScrapString","RunMacro", "Internal use during loop as a scrap memory register")
+#        obj.setEditorMode("ScrapString",2)# hidden
 #        obj.addProperty("App::PropertyBool","RunMacro","RunMacro","Whether to execute code contained in MacroFile each time through loop").RunMacro=True
 #        obj.addProperty("App::PropertyFile","MacroFile","RunMacro","Macro file to execute each time through the loop")
 #        obj.addProperty("App::PropertyStringList","MacroString","RunMacro","Quick and Dirty macro string to run each time through the loop").MacroString = DEFAULT_MACRO_STRING
@@ -155,11 +157,10 @@ __version__ = "0.2023.09.12"
 #            my_macro.doc.recompute()
 #        my_macro.setExpression = lambda idx,expr: setExpression(idx,expr)
 #        def getValue(idx):
-#            components = my_macro.props[idx].split('.')
-#            cur_obj = my_macro.objs[idx]
-#            for component in components:
-#                cur_obj = getattr(cur_obj,component)
-#            return cur_obj
+#              cur_obj = my_macro.objs[idx]
+#              cur_prop = my_macro.props[idx]
+#              fp.setExpression("ScrapString",f"{cur_obj.Name}.{cur_prop}")
+#              return float(fp.ScrapString)
 #        my_macro.getValue = lambda idx: getValue(idx)
 #        try:
 #            exec(macro_string, my_macro.__dict__)
