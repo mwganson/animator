@@ -110,6 +110,7 @@ These are the supported properties.  You may add another property type to the li
 ** add ability to run a macro stringlist property for quick and dirty macros that don't need their own file<br/>
 ** fix an issue that broke existing models in previous update by attempting to reference a new property that doesn't exist in the old objects<br/>
 ** fix a bug where document wasn't getting completely restored after animation completed<br/>
+** Add new items to context menu
 * 0.2023.09.03b<br/>
 ** add AnimatorLastFrame boolean variable to context of macro file
 * 0.2023.09.03<br/>
