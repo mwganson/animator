@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.2023.09.12d"
-#__version__ = "0.2023.09.12d"
+__version__ = "0.2023.09.12e"
+#__version__ = "0.2023.09.12e"
 ##Animator, 2023, by <TheMarkster>, LGPL2.1 or later
 ##Credit to Dan Miel for some of the A2Plus-related stuff
 #DEBUG = False
@@ -248,7 +248,7 @@ __version__ = "0.2023.09.12d"
 #                if variables[jj][0] != "Select Property":
 #                    nth = counter % variables[jj][3] #remainder of dividing counter by Nth property
 #                    step = getattr(fp,"Variable"+format(jj,'03')+"Step")
-#                    if nth == 0 and ste[ != 0.0: #set step to 0 to not animate this property
+#                    if nth == 0 and step != 0.0: #set step to 0 to not animate this property
 #                        self.setProperty(fp,variables[jj][0],variables[jj][1] + step * counter)
 #            if fp.ShowProgress:
 #                fp.Label2 = str(counter)+"/"+str(fp.Frames)
