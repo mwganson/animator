@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.2023.09.03b"
-#__version__ = "0.2023.09.03b"
+__version__ = "0.2023.09.12"
+#__version__ = "0.2023.09.12"
 ##Animator, 2023, by <TheMarkster>, LGPL2.1 or later
 ##Credit to Dan Miel for some of the A2Plus-related stuff
 #DEBUG = False
@@ -14,16 +14,31 @@ __version__ = "0.2023.09.03b"
 #except:
 #    a2p_present = False
 #    pass
+#DEFAULT_MACRO_STRING =[\
+#"#python code goes here",\
+#"#fp = Animator object",\
+#"#doc = document containing Animator object",\
+#"#props = list of properties in Variables",\
+#"#objs = list of objects in Variables",\
+#"#con = FreeCAD.Console",\
+#"#setExpression(idx,string_val) = objs[idx].setExpression(string_val)",\
+#"#getValue(idx) = get value contained in VariableNNN where NNN is idx-1",\
+#"#fp.CurrentFrame = current frame in animation loop",\
+#"#AnimatorLastFrame = True if current frame is last frame in loop",\
+#]
+
 #class Animator:
 #    def __init__(self, obj):
 #        animv = "Animator.v"+__version__
 #        obj.addProperty("App::PropertyBool","RunMacro","RunMacro","Whether to execute code contained in MacroFile each time through loop").RunMacro=True
 #        obj.addProperty("App::PropertyFile","MacroFile","RunMacro","Macro file to execute each time through the loop")
-#        obj.addProperty("App::PropertyBool","A2PlusSolve",animv,"Be sure to open A2Plus workbench first.  Executes solve command each step in the loop").A2PlusSolve = False
-#        obj.addProperty("App::PropertyStringList","A2PlusConstraints",animv,"List of A2Plus constraints to solve, solve all if blank\nPut # in front of those to ignore")
-#        obj.addProperty("App::PropertyBool","A2PlusRefreshConstraints",animv,"Refresh A2PlusConstraints will all constraints in document on Refresh, if True").A2PlusRefreshConstraints=True
-#        obj.addProperty("App::PropertyBool","Asm3Solve",animv,"Be sure to open Assembly 3 workbench first.  Executes solve command each step in the loop").Asm3Solve = False
-#        obj.addProperty("App::PropertyBool","Asm4Solve",animv,"Be sure to open Assembly 4 workbench first.  Executues solve command each step in the loop").Asm4Solve = False
+#        obj.addProperty("App::PropertyStringList","MacroString","RunMacro","Quick and Dirty macro string to run each time through the loop").MacroString = DEFAULT_MACRO_STRING
+#        obj.addProperty("App::PropertyBool","RunMacroString","RunMacro","Whether to execute code contained in MacroString each time through loop").RunMacroString=True
+#        obj.addProperty("App::PropertyBool","A2PlusSolve","Assemblers","Be sure to open A2Plus workbench first.  Executes solve command each step in the loop").A2PlusSolve = False
+#        obj.addProperty("App::PropertyStringList","A2PlusConstraints","Assemblers","List of A2Plus constraints to solve, solve all if blank\nPut # in front of those to ignore")
+#        obj.addProperty("App::PropertyBool","A2PlusRefreshConstraints","Assemblers","Refresh A2PlusConstraints will all constraints in document on Refresh, if True").A2PlusRefreshConstraints=True
+#        obj.addProperty("App::PropertyBool","Asm3Solve","Assemblers","Be sure to open Assembly 3 workbench first.  Executes solve command each step in the loop").Asm3Solve = False
+#        obj.addProperty("App::PropertyBool","Asm4Solve","Assemblers","Be sure to open Assembly 4 workbench first.  Executues solve command each step in the loop").Asm4Solve = False
 #        obj.addProperty("App::PropertyBool","ShowProgress",animv,"Whether to show progress in Description/Label2 column during animation").ShowProgress = True
 #        obj.addProperty("App::PropertyBool","StartAnimating",animv,"[Trigger] Start animating (or double click Animator in tree)").StartAnimating = False
 #        obj.addProperty("App::PropertyBool","StopAnimating",animv,"[Trigger] Stop animating (or double click Animator in tree)").StopAnimating = False
@@ -31,6 +46,8 @@ __version__ = "0.2023.09.03b"
 #You may use Undo after the animation to manually reset the values if this is False.").ResetAfterAnimation = True
 #        obj.addProperty("App::PropertyBool","Refresh",animv,"[Trigger] Refreshes Variables property lists, sets self back to False\nUse this if objects/properties have changed").Refresh = False
 #        obj.addProperty("App::PropertyInteger","Frames",animv,"Number of frames / iterations per loop").Frames = 100
+#        obj.addProperty("App::PropertyInteger","CurrentFrame",animv,"Current frame in loop")
+#        obj.setEditorMode("CurrentFrame",2) #hidden
 #        obj.addProperty("App::PropertyFloatConstraint","Sleep",animv,"Optional sleep time (in seconds) per frame / iteration").Sleep = (0,0,float("inf"),.1)
 #        obj.addProperty("App::PropertyFloatConstraint","InitialDelay",animv,"Initial delay (in seconds) before animation starts").InitialDelay = (0,-.045,60,.1)
 #        obj.addProperty("App::PropertyIntegerConstraint","VariableCount",animv,"Number of variables to use").VariableCount = (3,0,100,1)
@@ -45,7 +62,8 @@ __version__ = "0.2023.09.03b"
 #        self.fpName = obj.Name
 #        self.isAnimating = False
 #        self.expressionDict = {} #to hold objects' initial ExpressionEngine before animation
-#        self.stringToRun = ""
+#        self.stringToRun = "" #from macro file
+#        self.stringToRunFromMacroString = ""
 #        self.macroPermissions = 0 #you have to giver permission at least once each session
 #        obj.Proxy = self
 #
@@ -91,6 +109,8 @@ __version__ = "0.2023.09.03b"
 #            self.checkAndWarnAliases(fp,prop)
 #        elif "MacroFile" in prop and fp.MacroFile:
 #            self.readMacroFile(fp)
+#        elif "MacroString" in prop and fp.MacroString != DEFAULT_MACRO_STRING:
+#            self.readMacroString(fp)
 #
 #    def readMacroFile(self,fp):
 #        if DEBUG:
@@ -103,20 +123,44 @@ __version__ = "0.2023.09.03b"
 #        self.stringToRun = fin.read()
 #        fin.close()
 #
-#    def runString(self, lastFrame = False):
+#    def readMacroString(self,fp):
+#        if DEBUG:
+#            print("reading macro string")
+#        self.stringToRunFromMacroString = "\n".join(fp.MacroString)
+#
+#    def runString(self, lastFrame = False, bRunMacroString=False):
 #        if DEBUG:
 #            print ("running macro file...")
-#        macro_string = self.stringToRun
+#        macro_string = self.stringToRun if not bRunMacroString else self.stringToRunFromMacroString
+#        import FreeCAD, FreeCADGui
+#        fp = FreeCAD.ActiveDocument.getObject(self.fpName)
 #        import sys, importlib
 #        my_name = 'my_macro'
-#        my_spec = importlib.util.spec_from_loader(my_name, loader=None)   
+#        my_spec = importlib.util.spec_from_loader(my_name, loader=None)
 #        my_macro = importlib.util.module_from_spec(my_spec)
-#        import FreeCAD, FreeCADGui
 #        my_macro.FreeCAD = FreeCAD
 #        my_macro.App = FreeCAD
 #        my_macro.Gui = FreeCADGui
 #        my_macro.FreeCADGui = FreeCADGui
 #        my_macro.AnimatorLastFrame = lastFrame
+#        my_macro.doc = fp.Document
+#        my_macro.Animator = fp
+#        my_macro.con = FreeCAD.Console
+#        my_macro.fp = fp
+#        my_macro.props = [getattr(fp,p) for p in fp.PropertiesList if "Enumeration" in fp.getTypeIdOfProperty(p) if getattr(fp,p) != 'Select Property']
+#        my_macro.objs = [fp.Document.getObject(p.split(".")[0]) for p in my_macro.props]
+#        my_macro.props = [p[p.index(".")+1:] for p in my_macro.props]
+#        def setExpression(idx,expr):
+#            my_macro.objs[idx].setExpression(my_macro.props[idx],expr)
+#            my_macro.doc.recompute()
+#        my_macro.setExpression = lambda idx,expr: setExpression(idx,expr)
+#        def getValue(idx):
+#            components = my_macro.props[idx].split('.')
+#            cur_obj = my_macro.objs[idx]
+#            for component in components:
+#                cur_obj = getattr(cur_obj,component)
+#            return cur_obj
+#        my_macro.getValue = lambda idx: getValue(idx)
 #        try:
 #            exec(macro_string, my_macro.__dict__)
 #        except Exception as e:
@@ -124,16 +168,22 @@ __version__ = "0.2023.09.03b"
 #            self.isAnimating = False
 #            raise
 #
-#    def getPermissionFromUser(self,fp):
+#
+#    def getPermissionFromUser(self,fp,bRunMacroString=False):
 #        msgBox = QtGui.QMessageBox()
 #        msgBox.setWindowTitle("Animator Macro Security Warning")
 #        msgBox.setIcon(QtGui.QMessageBox.Warning)
-#        msgBox.setText("Warning: The following file will be executed: " + fp.MacroFile)
-#        info = "Do you want to execute the contents of this file?\n\n"
+#        if not bRunMacroString:
+#            msgBox.setText("Warning: The following file will be executed: " + fp.MacroFile)
+#            info = "Do you want to execute the contents of this file?\n\n"
+#        else:
+#            msgBox.setText("Warning: Contents of property Macro String will be executed as python code")
+#            info = "Do you want to execute the contents of this string?\n\n"
+#        info += "DO NOT ALLOW IF YOU GOT THIS FILE FROM AN UNTRUSTED SOURCE!!!\n\n"
 #        info += "Note: if Reset After Animation is True (the default) any document objects "
 #        info += "created by the macro will be removed after animation is complete.\n\n"
 #        info += "These objects can be restored using Redo in FreeCAD (Ctrl + Y).\n"
-#        msgBox.setInformativeText(info) 
+#        msgBox.setInformativeText(info)
 #        msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
 #        msgBox.setDefaultButton(QtGui.QMessageBox.No)
 #        ret = msgBox.exec();
@@ -146,10 +196,17 @@ __version__ = "0.2023.09.03b"
 #    def startAnimating(self, skip_permission = False):
 #        self.isAnimating = True
 #        fp = FreeCAD.ActiveDocument.getObject(self.fpName)
-#        if fp.RunMacro and fp.MacroFile:
+#        if hasattr(fp,"RunMacro") and fp.RunMacro and fp.MacroFile:
 #            self.readMacroFile(fp)
 #            if not skip_permission or self.macroPermissions == 0:
 #                if not self.getPermissionFromUser(fp):
+#                    FreeCAD.Console.PrintWarning("Animator: Animation was canceled by user.\n")
+#                    self.isAnimating = False
+#                    return
+#        if hasattr(fp,"RunMacroString") and fp.RunMacroString and fp.MacroString != DEFAULT_MACRO_STRING:
+#            self.readMacroString(fp)
+#            if not skip_permission or self.macroPermissions == 0:
+#                if not self.getPermissionFromUser(fp,bRunMacroString=True):
 #                    FreeCAD.Console.PrintWarning("Animator: Animation was canceled by user.\n")
 #                    self.isAnimating = False
 #                    return
@@ -176,8 +233,12 @@ __version__ = "0.2023.09.03b"
 #            uncommented = [con for con in fp.A2PlusConstraints if con[0] != "#"]
 #            runlist = [fp.Document.getObject(con) for con in uncommented]
 #            FreeCAD.Console.PrintMessage(f"Animator: using these constraints: {uncommented}"+chr(10))
+#        if hasattr(fp,"CurrentFrame"):
+#            fp.CurrentFrame = 0 #use this to ensure we have undone everything later
 #        fp.Document.openTransaction("Reset animated objects")
 #        while (counter <= fp.Frames and not fp.StopAnimating):
+#            if hasattr(fp,"CurrentFrame"):
+#                fp.CurrentFrame = counter
 #            QtGui.QApplication.instance().processEvents()
 #            for jj in range(1,fp.VariableCount+1):
 #                if variables[jj][0] != "Select Property":
@@ -198,12 +259,17 @@ __version__ = "0.2023.09.03b"
 #                FreeCADGui.runCommand('Asm4_updateAssembly',0)
 #            if fp.RunMacro and self.stringToRun:
 #                self.runString(counter == fp.Frames)
+#            if hasattr(fp,"RunMacroString") and fp.RunMacroString and fp.MacroString != DEFAULT_MACRO_STRING:
+#                self.runString(counter == fp.Frames, bRunMacroString=True)
 #            FreeCADGui.updateGui()
 #            time.sleep(fp.Sleep)
 #            counter += 1
 #        fp.Document.commitTransaction()
 #        if hasattr(fp,"ResetAfterAnimation") and fp.ResetAfterAnimation:
 #            fp.Document.undo()
+#            if hasattr(fp,"CurrentFrame") and fp.CurrentFrame != 0:
+#                while fp.CurrentFrame != 0:
+#                    fp.Document.undo()
 #        fp.StopAnimating = False
 #        self.isAnimating = False
 #        self.restoreExpressions(fp)
@@ -326,6 +392,17 @@ __version__ = "0.2023.09.03b"
 #
 #    def onDelete(self, vobj, subelements):
 #        return True
+#
+#    def setupContextMenu(self, vobj, menu):
+#         text = {True:"Unrefresh %1",False:"Refresh properties for %1"}
+#         action = menu.addAction(text[vobj.Object.Refresh].replace("%1",vobj.Object.Label))
+#         action.triggered.connect(lambda: setattr(vobj.Object,"Refresh",True))
+#         text = {True:"Stop Animating %1",False:"Start Animating %1"}
+#         action = menu.addAction(text[vobj.Object.StartAnimating].replace("%1",vobj.Object.Label))
+#         action.triggered.connect(lambda: setattr(vobj.Object,"StartAnimating",True))
+#         text = {True:"Start Animating %1",False:"Stop Animating %1"}
+#         action = menu.addAction(text[vobj.Object.StopAnimating].replace("%1",vobj.Object.Label))
+#         action.triggered.connect(lambda: setattr(vobj.Object,"StopAnimating",True))
 #
 #    def updateData(self, fp, prop):
 #        '''If a property of the handled feature has changed we have the chance to handle this here'''
@@ -558,6 +635,82 @@ def writeFile():
 #    makeObject(None)
 #    raise Exception("quick exit for testing/debugging")
 ############
+
+#following is for benefit of addon manager to install toolbar icon
+__icon__ = """
+/* XPM */
+static char *_635391677201[] = {
+"64 64 4 1 ",
+"  c black",
+". c #FFFF7F7F2727",
+"X c #FFFFF2F20000",
+"o c None",
+/* pixels */
+"oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"ooooooooooooooooooooooooooooooooooooooooooXXX   XXX   XXX    ooo",
+"ooooooooooooooooooooooooooooooooooooooooooXXX   XXX   XXX    ooo",
+"ooooooooooooooooooooooooooooooooooooooooooXXX   XXX   XXX    ooo",
+"ooooooooooooooooooooooooooooooooooooooooooXXX   XXX   XXX    ooo",
+"ooooooooooooooooooooooooXXX   XXX   XXX   XXX   XXX   XXX    ooo",
+"ooooooooooooooooooooooooXXX   XXX   XXX   XXXooooooooooooooooooo",
+"ooo   XXX   XXX   XXX   XXX   XXX   XXX   XXXooooooooooooooooooo",
+"ooo   XXX   XXX   XXX   XXX   XXX   XXX   XXXooooooooooooooooooo",
+"ooo   XXX   XXX   XXX   XXX   XXX   XXX   XXXooooooooooooooooooo",
+"ooo   XXX   XXX   XXX   oooooooooooooooooooooooooooooooooooooooo",
+"ooo   XXX   XXX   XXX   oooooooooooooooooooooooooooooooooooooooo",
+"ooo   XXXooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"ooo   XXXooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"ooo   XXXooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"ooo   XXXooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"ooo   XXXooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"ooo   XXX   XXX   XXX   XXX   XXX   XXX   XXX   XXX   XXX    ooo",
+"ooo   XXX   XXX   XXX   XXX   XXX   XXX   XXX   XXX   XXX    ooo",
+"ooo   XXX   XXX   XXX   XXX   XXX   XXX   XXX   XXX   XXX    ooo",
+"ooo   XXX   XXX   XXX   XXX   XXX   XXX   XXX   XXX   XXX    ooo",
+"ooo   XXX   XXX   XXX   XXX   XXX   XXX   XXX   XXX   XXX    ooo",
+"ooo   XXX   XXX   XXX   XXX   XXX   XXX   XXX   XXX   XXX    ooo",
+"ooo   XXX   XXX   XXX   XXX   XXX   XXX   XXX   XXX   XXX    ooo",
+"oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"ooo                                                          ooo",
+"ooo                                                          ooo",
+"ooo                                                          ooo",
+"ooo                                                          ooo",
+"ooo     ................................................     ooo",
+"ooo     ................................................     ooo",
+"ooo     ................................................     ooo",
+"ooo     ................................................     ooo",
+"ooo                                                          ooo",
+"ooo                                                          ooo",
+"ooo                                                          ooo",
+"ooo                                                          ooo",
+"ooo                                                          ooo",
+"ooo     ................................................     ooo",
+"ooo     ................................................     ooo",
+"ooo     ................................................     ooo",
+"ooo     ................................................     ooo",
+"ooo                                                          ooo",
+"ooo                                                          ooo",
+"ooo                                                          ooo",
+"ooo                                                          ooo",
+"ooo                                                          ooo",
+"ooo     ................................................     ooo",
+"ooo     ................................................     ooo",
+"ooo     ................................................     ooo",
+"ooo     ................................................     ooo",
+"ooo                                                          ooo",
+"ooo                                                          ooo",
+"ooo                                                          ooo",
+"ooo                                                          ooo",
+"oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+"oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
+};"""
 
 if __name__ == "__main__":
     import os
