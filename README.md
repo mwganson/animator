@@ -5,20 +5,12 @@ FreeCAD Macro to animate a model.  Run the macro to create an Animator feature p
 <img src="Animator.svg" alt="toolbar icon"><a href="Animator.svg">Download</a> the toolbar icon.
 
 ## Installation
-Not yet available in the Addon Manager.  Install by copying the Animator.FCMacro file into your macro folder.  On first run it will offer to create a file (animator.py).  This new file is needed in order for FreeCAD to be able to load the class definitions needed by the Animator objects when opening a file containing one of the saved objects.  When you uninstall Animator you must manually remove the animatory.py file.
+Install with the Addon Manager.  On first run it will offer to create a file (animator.py).  This new file is needed in order for FreeCAD to be able to load the class definitions needed by the Animator objects when opening a file containing one of the saved objects.  When you uninstall Animator you must manually remove the animatory.py file.
 
 ## Properties
 Like all feature python objects the Animator objects are controlled largely by editing their properties in the property view.  Some of the boolean properties act as triggers for commands.  When toggling a trigger from False to True the command is executed and the trigger sets itself back to False, awaiting the next trigger.
 
 ## Animator section
-### A2Plus Solve (boolean)
-### Asm3 Solve (boolean)
-### Asm4 Solve (boolean)
-Executes the Assembly workbench solver each step through the loop if True.  Be sure to have opened the assembler workbench at least once during the sesssion so the command is loaded into FreeCAD or else the macro will fail.
-### A2PlusConstraints (stringlist)
-List of found A2Plus constraints in the current document.  You might need to toggle Refresh to update from time to time if new constraints are added.  Put a python style comment character pound (#) as first character of line to not solve that constraint (or you may also just delete it from the list).  New constraints may be typed in, but ensure the spelling is exactly correct.  Note: [] empty list means solve all constraints.
-### A2PlusRefreshConstraints (bool)
-If True, when Refresh is toggled, then the A2Plus constraints will also be updated.  (Warning: this will overwrite any python style comments on any of the lines.)  Set this to False if you want to refresh the other variables in the document, but not the A2Plus Constraints.
 ### Frames (integer)
 Default: 100.  This is how many frames / iterations there will be in the animation loop.  Internally a counter begins at 1 and is incremented by 1 each time through the loop.   The animation ends with the counter reaches 100 or if the user double clicks the Animator object or toggles Stop Animation property to True.
 ### Initial Delay (float constraint)
@@ -45,8 +37,18 @@ Default: 1.  This means increment the property every Frame through the loop.  A 
 Default: 0.  The starting value for an animated property.  When the animation begins the property is set to this value at the beginning of the loop.  Note: properties are not reset to their original values after the animation is complete.  The objects remain at their position occupied in the final Frame except for properties that have been set with expressions.  For example, a Cylinder Height property might be set with an expression = 2 * Radius so that its Height is always 2 * its Radius.  If you elect to animate the Height property it will animate with the values it is set to by the Animator object during the loop.  Then at the end of the loop it reverts to its former Height of 2 * Radius, whatever the current Radius is.  If the Height is not set with an expression, then it retains the Height it had in the final Frame of the loop.  Set properties with expressions if you want them to revert.  An expression can also just be a number, like by pressing = and then entering 10 in the dialog.
 ### VariableNNN Step (float)
 Default: 1.0.  The amount by which to increment or decrement the animated property each Frame.  Use a negative value if you wish to decrement.  For example, to rotate an object from 45 degrees to 15 degrees you would set the Start property to 45, the Step property to -1, and the Frames property to 30.  Alternatively, you could set Step to -0.5 and Frames to 60 to do this in 0.5 degree increments.
+## Assembler section
+These are related to various assemblers you might be using.
+### A2Plus Solve (boolean)
+### Asm3 Solve (boolean)
+### Asm4 Solve (boolean)
+Executes the Assembly workbench solver each step through the loop if True.  Be sure to have opened the assembler workbench at least once during the sesssion so the command is loaded into FreeCAD or else the macro will fail.
+### A2PlusConstraints (stringlist)
+List of found A2Plus constraints in the current document.  You might need to toggle Refresh to update from time to time if new constraints are added.  Put a python style comment character pound (#) as first character of line to not solve that constraint (or you may also just delete it from the list).  New constraints may be typed in, but ensure the spelling is exactly correct.  Note: [] empty list means solve all constraints.
+### A2PlusRefreshConstraints (bool)
+If True, when Refresh is toggled, then the A2Plus constraints will also be updated.  (Warning: this will overwrite any python style comments on any of the lines.)  Set this to False if you want to refresh the other variables in the document, but not the A2Plus Constraints.
 ## Run Macro
-Here we have properties related to the feature of allowing to run an arbitrary macro file each frame of the animation.  This is obviously a security risk, so the user is required to give permission each time the animation is started.  This permission dialog can be bypassed by starting the animation from the python console and passing a value of True to the function.  Select the animator icon in the tree, press Ctrl+Shift+P.  Then in the python console enter<br/>
+Here we have properties related to the feature of allowing to run an arbitrary macro file (or code string in the Macro String property) each frame of the animation.  This is obviously a security risk, so the user is required to give permission each time the animation is started.  This permission dialog can be bypassed by starting the animation from the python console and passing a value of True to the function.  Select the animator icon in the tree, press Ctrl+Shift+P.  Then in the python console enter<br/>
 <br/>
 <pre>
 obj.Proxy.startAnimating(True)
@@ -71,6 +73,27 @@ if AnimatorLastFrame:
     print("This is the final frame in the animation.")
 </pre>
 
+Assorted variables pre-defined for your use in your python code:<br/>
+
+##### FreeCAD
+##### App
+##### FreeCADGui
+##### Gui
+##### AnimatorLastFrame (boolean, True = in last frame of animation)
+##### doc
+##### Animator
+##### fp
+##### con (FreeCAD.Console -- e.g. con.PrintMessage("your message\n"))
+##### fp.CurrentFrame -- current frame of the animation loop (starts with 1)
+##### props -- list of strings of the properties in the VariablesNNN enumerations.  For example, if Variable001 = "Sketch.Constraints.Width" then props[0] = "Constraints.Width".
+##### objs -- list of objects referenced in the VariablesNNN properties. For example, if Variable001 = Cylinder.Height, then objs[0] = the Cylinder document object.
+##### setExpression(idx,expr) -- sets the value of objs[idx] property props[idx] to expr.  Example, if Variable002 = "Cylinder.Radius", then setExpression(1,"2.5") sets Cylinder.Radius to the expression "2.5".  Other example: setExpression(1, "Box.Height")  The parameter idx is the index into the props and objs lists, which are 0-indexed.
+##### getValue(idx) -- gets the value of the props[idx] at this point in the animation loop.  If you want to get and set values for a property easily in this manner, then select them for the various VariableNNN properties and set the VariableNNN Step property to 0.  That way they're not being animated in the loop, but your code has easy access to them for setting and retrieving values.
+
+### Run Macro String (boolean)
+Default: True.  Set to False if you don't want to run the string in Macro String each time through the loop.  (Note: The string is not run if it contains the default values, which are all just comments, anyway.)
+### Macro String (String list)
+Default: Some commented lines to give some quick help for getting started.  Add your own code to the bottom of the list or delete the comments and substitute your own code.  Each item in the list is its own python line of code, so be sure to add spaces to the front where indenting is needed for that line.  You can copy/paste code into the string list editor.
 ### Run Macro (boolean)
 Default: True.  Set to False if you don't want the macro file to be executed each frame during the loop.
 ### Macro File (File)
@@ -82,7 +105,12 @@ These are the objects that will not appear in the VariableNNN property lists.  B
 ### Supported (string list)
 These are the supported properties.  You may add another property type to the list to add support for it, but if the new property type has subproperties, then it will not function correctly.  Ping me on the forum <TheMarkster> and I will see about adding the new support for the new property type for you.  Other than that, the new property should (hopefully) work just by adding it.  Just remember it must be something that will accept incrementing by a floating point value.  You can test this in the python console by entering:  obj.setExpression("PropertyName","0.1") where obj is the object containing the property, "PropertyName" is the name of the property, and "0.1" is the value you wish to set it to.  If this works, then adding the property type to the Supported list should also work.  To determine the property type, right click on the property and select Show All from the context menu.  Then hover your mouse over the property name to see the tooltip showing it's property name, usually something like "App::PropertyFloat."
 ## ChangeLog
-# 0.2023.09.03b<br/>
+* 0.2023.09.12<br/>
+** add some more variables to context of macro file and new macro string<br/>
+** add ability to run a macro stringlist property for quick and dirty macros that don't need their own file<br/>
+** fix an issue that broke existing models in previous update by attempting to reference a new property that doesn't exist in the old objects<br/>
+** fix a bug where document wasn't getting completely restored after animation completed<br/>
+* 0.2023.09.03b<br/>
 ** add AnimatorLastFrame boolean variable to context of macro file
 * 0.2023.09.03<br/>
 ** fix bug where if user forgot to select a property to animate the animation no longer worked even after selecting a property
