@@ -9,7 +9,26 @@ Install with the Addon Manager.  On first run it will offer to create a file (an
 
 ## Properties
 Like all feature python objects the Animator objects are controlled largely by editing their properties in the property view.  Some of the boolean properties act as triggers for commands.  When toggling a trigger from False to True the command is executed and the trigger sets itself back to False, awaiting the next trigger.
-
+## Animated Gif section
+New beginning with version 0.2023.09.13.  These properties control the optional creation of an animated gif during the animation.  During each loop a screen capture is done of the 3d view and placed into a png file named Frame_NNN.png (where NNN is the current frame).  For example, if you have a 3-frame animation then you will have Frame_001.png, Frame_002.png, and Frame_003.png in the gif folder, in addition to the animated gif file.  These frames are deleted prior to running the next animation if Make Gif is set to True (or else they would be incoporated into the new gif).  If the animated gif already exists, it, too, will get replaced.  Use a different Animated Gif Filename if you want to keep it or rename it manually or move it to a new location or set a new location for the animated gif to be placed in.  Most of the time you will probably want to replace the gif since making this is likely to be an interative, trial and error process in most cases.
+### Animated Gif Filename (string)
+The name to give to the animated gif that gets created.  If there already exists a file with the same name in the folder it will be replaced.
+### BGColor (string)
+The color of the background to put into the animated gif.  Default is "Transparent".  This is the name of the color, so you're free to try different colors here, such as "green", "blue", "chartreuse", etc.
+### Fit All Each Frame (boolean)
+Default: True.  Sends Gui.sendMsgToActiveView("ViewFit") just before taking the screen shot for each frame.  This is the Std_ViewFitAll (shortcut: V,F) in the FreeCAD Gui.  It fits the model to the screen.
+### Gif Frame Rate (integer)
+Default: 20 milliseconds.  How many milliseconds to show each frame for before moving to the next frame.  Lowest accepted value is 1 millisecond.  Highest is a million seconds, not that you would likely ever need that frame rate.
+### Gif Height (integer)
+Default: 480.  This is the height in pixels.
+### Gif Width (integer)
+Default 640. This is the width in pixels.
+### Make Gif (boolean)
+Default:False -- do not make the animated gif.
+### Path To FFMPEG (file)
+Set this to point to the ffmpeg executable binary wherever it happens to be on your system.  Once you set its location it gets remembered the next time you create a new Animator object, so you should only need to set it once.  The value gets stored in user preferences:/plugins/Animator_Macro.  Tools menu -> edit parameters -> plugins -> Animator_Macro.  If you uninstall the macro you can deleted these parameters, too, or just leave them there.
+### Path To Gif (folder)
+Set this to point to the folder you want to save the animation frame files and final .gif file into.  If you leave it blank it will create a subfolder in your Macros folder called Animator and inside that one another subfolder called screen_grabs, which is where you will find the frame pngs and the animated gif.  Note: the frame pngs are deleted each time a new animated gif is produced and if the new animated gif is the same name as an existing gif it will get replaced.  This, like the Path To FFMPEG parameter is also saved in parameters.
 ## Animator section
 ### Frames (integer)
 Default: 100.  This is how many frames / iterations there will be in the animation loop.  Internally a counter begins at 1 and is incremented by 1 each time through the loop.   The animation ends with the counter reaches 100 or if the user double clicks the Animator object or toggles Stop Animation property to True.
@@ -106,6 +125,8 @@ These are the objects that will not appear in the VariableNNN property lists.  B
 ### Supported (string list)
 These are the supported properties.  You may add another property type to the list to add support for it, but if the new property type has subproperties, then it will not function correctly.  Ping me on the forum <TheMarkster> and I will see about adding the new support for the new property type for you.  Other than that, the new property should (hopefully) work just by adding it.  Just remember it must be something that will accept incrementing by a floating point value.  You can test this in the python console by entering:  obj.setExpression("PropertyName","0.1") where obj is the object containing the property, "PropertyName" is the name of the property, and "0.1" is the value you wish to set it to.  If this works, then adding the property type to the Supported list should also work.  To determine the property type, right click on the property and select Show All from the context menu.  Then hover your mouse over the property name to see the tooltip showing it's property name, usually something like "App::PropertyFloat."
 ## ChangeLog
+* 0.2023.09.13<br/>
+** add ability to make animated gifs from animation (requires FFMPEG binary)
 * 0.2023.09.12d<br/>
 ** add setStep() function
 ** check step each time through animation loop in case user has changed it
