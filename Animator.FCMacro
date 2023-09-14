@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.2023.09.12e"
-#__version__ = "0.2023.09.12e"
+__version__ = "0.2023.09.13"
+#__version__ = "0.2023.09.13"
 ##Animator, 2023, by <TheMarkster>, LGPL2.1 or later
 ##Credit to Dan Miel for some of the A2Plus-related stuff
 #DEBUG = False
@@ -8,6 +8,7 @@ __version__ = "0.2023.09.12e"
 #import time
 #from pivy import coin
 #from PySide import QtCore, QtGui
+#import os, subprocess, glob
 #try:
 #    import a2p_solversystem
 #    a2p_present = True
@@ -30,6 +31,19 @@ __version__ = "0.2023.09.12e"
 #class Animator:
 #    def __init__(self, obj):
 #        animv = "Animator.v"+__version__
+#        obj.addProperty("App::PropertyBool","MakeGif","AnimatedGif","Make an animated gif using ffmpeg (requires ffmpeg binary be installed)").MakeGif = False
+#        obj.addProperty("App::PropertyFile","PathToFFMPEG","AnimatedGif","Browse to locate the ffmpeg binary with this property")
+#        pg = FreeCAD.ParamGet("User parameter:Plugins/Animator_Macro")
+#        obj.PathToFFMPEG = pg.GetString("PathToFFMPEG","")
+#        obj.addProperty("App::PropertyIntegerConstraint","GifHeight","AnimatedGif", "Height in pixels of the animated gif to be produced").GifHeight = (480,1,1000000,1)
+#        obj.addProperty("App::PropertyIntegerConstraint","GifWidth","AnimatedGif","Width in pixels of the animated gif to be produced").GifWidth = (640,1,1000000,1)
+#        obj.addProperty("App::PropertyIntegerConstraint","GifFrameRate","AnimatedGif","Frame rate in milliseconds (1000 = 1 second)").GifFrameRate = (20,1,10000,1)
+#        obj.addProperty("App::PropertyPath","PathToGif","AnimatedGif","Folder in which to place frame_NNN.png files and animated gif file (default: macros/Animator/screen_grabs/)")
+#        obj.PathToGif = pg.GetString("PathToGif","")
+#        obj.addProperty("App::PropertyString","AnimatedGifFilename","AnimatedGif","Name for animated gif\nReplaces any files of the same name!").AnimatedGifFilename = "Animated.gif"
+#        obj.addProperty("App::PropertyBool","FitAllEachFrame", "AnimatedGif", \
+#                        "If True send 'ViewFit' message to active view before taking the screenshot each frame").FitAllEachFrame = True
+#        obj.addProperty("App::PropertyString","BGColor","AnimatedGif","Color to use for background.  Example: 'Yellow'.  Default: 'Transparent'").BGColor="Transparent"
 #        obj.addProperty("App::PropertyFloat","ScrapString","RunMacro", "Internal use during loop as a scrap memory register")
 #        obj.setEditorMode("ScrapString",2)# hidden
 #        obj.addProperty("App::PropertyBool","RunMacro","RunMacro","Whether to execute code contained in MacroFile each time through loop").RunMacro=True
@@ -38,7 +52,8 @@ __version__ = "0.2023.09.12e"
 #        obj.addProperty("App::PropertyBool","RunMacroString","RunMacro","Whether to execute code contained in MacroString each time through loop").RunMacroString=True
 #        obj.addProperty("App::PropertyBool","A2PlusSolve","Assemblers","Be sure to open A2Plus workbench first.  Executes solve command each step in the loop").A2PlusSolve = False
 #        obj.addProperty("App::PropertyStringList","A2PlusConstraints","Assemblers","List of A2Plus constraints to solve, solve all if blank\nPut # in front of those to ignore")
-#        obj.addProperty("App::PropertyBool","A2PlusRefreshConstraints","Assemblers","Refresh A2PlusConstraints will all constraints in document on Refresh, if True").A2PlusRefreshConstraints=True
+#        obj.addProperty("App::PropertyBool","A2PlusRefreshConstraints","Assemblers", \
+#                        "Refresh A2PlusConstraints will all constraints in document on Refresh, if  True").A2PlusRefreshConstraints=True
 #        obj.addProperty("App::PropertyBool","Asm3Solve","Assemblers","Be sure to open Assembly 3 workbench first.  Executes solve command each step in the loop").Asm3Solve = False
 #        obj.addProperty("App::PropertyBool","Asm4Solve","Assemblers","Be sure to open Assembly 4 workbench first.  Executues solve command each step in the loop").Asm4Solve = False
 #        obj.addProperty("App::PropertyBool","ShowProgress",animv,"Whether to show progress in Description/Label2 column during animation").ShowProgress = True
@@ -46,13 +61,14 @@ __version__ = "0.2023.09.12e"
 #        obj.addProperty("App::PropertyBool","StopAnimating",animv,"[Trigger] Stop animating (or double click Animator in tree)").StopAnimating = False
 #        obj.addProperty("App::PropertyBool","ResetAfterAnimation",animv,"Reset animated properties back to initial values after the animation is done\n\
 #You may use Undo after the animation to manually reset the values if this is False.").ResetAfterAnimation = True
-#        obj.addProperty("App::PropertyBool","Refresh",animv,"[Trigger] Refreshes Variables property lists, sets self back to False\nUse this if objects/properties have changed").Refresh = False
+#        obj.addProperty("App::PropertyBool","Refresh",animv,"[Trigger] Refreshes Variables property lists, sets self back to False\nUse this if objects/properties have changed")\
+#.Refresh = False
 #        obj.addProperty("App::PropertyInteger","Frames",animv,"Number of frames / iterations per loop").Frames = 100
 #        obj.addProperty("App::PropertyInteger","CurrentFrame",animv,"Current frame in loop")
 #        obj.setEditorMode("CurrentFrame",2) #hidden
 #        obj.addProperty("App::PropertyFloatConstraint","Sleep",animv,"Optional sleep time (in seconds) per frame / iteration").Sleep = (0,0,float("inf"),.1)
 #        obj.addProperty("App::PropertyFloatConstraint","InitialDelay",animv,"Initial delay (in seconds) before animation starts").InitialDelay = (0,-.045,60,.1)
-#        obj.addProperty("App::PropertyIntegerConstraint","VariableCount",animv,"Number of variables to use").VariableCount = (3,0,100,1)
+#        obj.addProperty("App::PropertyIntegerConstraint","VariableCount",animv,"Number of variables to use\nIncrease for more VariableNNN properties").VariableCount = (3,0,100,1)
 #        obj.addProperty("App::PropertyStringList","BlacklistedObjects","SettingsAdvanced","Object types not to include in Properties").BlacklistedObjects =\
 #["App::Origin","App::Line","App::Plane"]
 #        obj.addProperty("App::PropertyStringList","Supported","SettingsAdvanced","Supported property types")
@@ -70,16 +86,20 @@ __version__ = "0.2023.09.12e"
 #        obj.Proxy = self
 #
 #    def getSubProperties(self,prop,typeId,obj):
-#        if not "Placement" in typeId and not "Vector" in typeId and not "Matrix" in typeId and not "ConstraintList" in typeId and not "Spreadsheet::Sheet" in typeId and not "Rotation" in typeId:
+#        if not "Placement" in typeId and not "Vector" in typeId and not "Matrix" in typeId and not "ConstraintList" in typeId \
+#                                                          and not "Spreadsheet::Sheet" in typeId and not "Rotation" in typeId:
 #            return [prop]
 #        elif "Rotation" in typeId:
 #            return [prop+".Angle",prop+".Axis.x",prop+".Axis.y",prop+".Axis.z",prop+".Roll",prop+".Pitch",prop+".Yaw"]
 #        elif "Placement" in typeId:
-#            return [prop+".Rotation.Angle",prop+".Rotation.Axis.x",prop+".Rotation.Axis.y",prop+".Rotation.Axis.z",prop+".Rotation.Pitch",prop+".Rotation.Yaw",prop+".Rotation.Roll",prop+".Base.x",prop+".Base.y",prop+".Base.z"]
+#            return [prop+".Rotation.Angle",prop+".Rotation.Axis.x",prop+".Rotation.Axis.y",prop+\
+#                   ".Rotation.Axis.z",prop+".Rotation.Pitch",prop+".Rotation.Yaw",prop+\
+#                   ".Rotation.Roll",prop+".Base.x",prop+".Base.y",prop+".Base.z"]
 #        elif "Vector" in typeId:
 #            return [prop+".x",prop+".y",prop+".z"]
 #        elif "Matrix" in typeId:
-#            return [prop+".A11",prop+".A12",prop+".A13",prop+".A14",prop+".A21",prop+".A22",prop+".A23",prop+".A24",prop+".A31",prop+".A32",prop+".A33",prop+".A34",
+#            return [prop+".A11",prop+".A12",prop+".A13",prop+".A14",prop+".A21",prop+".A22",prop+".A23",prop+\
+#                   ".A24",prop+".A31",prop+".A32",prop+".A33",prop+".A34",
 #prop+".A41",prop+".A42",prop+".A43",prop+".A44"]
 #        elif "ConstraintList" in typeId:
 #            conlist = getattr(obj,prop)
@@ -113,6 +133,65 @@ __version__ = "0.2023.09.12e"
 #            self.readMacroFile(fp)
 #        elif "MacroString" in prop and fp.MacroString != DEFAULT_MACRO_STRING:
 #            self.readMacroString(fp)
+#        elif "PathToFFMPEG" in prop and hasattr(fp,"PathToFFMPEG"):
+#            pg = FreeCAD.ParamGet("User parameter:Plugins/Animator_Macro")
+#            pg.SetString("PathToFFMPEG",fp.PathToFFMPEG)
+#        elif "PathToGif" in prop and hasattr(fp,"PathToGif"):
+#            pg = FreeCAD.ParamGet("User parameter:Plugins/Animator_Macro")
+#            pg.SetString("PathToGif",fp.PathToGif)
+#
+#    def setupGifFolder(self,fp):
+#        """cleans up folder of any existing PNG and GIF files, creates folder if necessary"""
+#        if not hasattr(fp,"MakeGif") or not fp.MakeGif:
+#            return
+#        if not fp.PathToFFMPEG:
+#            pg = FreeCAD.ParamGet("User parameter:Plugins/Animator_Macro")
+#            fp.PathToFFMPEG = pg.GetString("PathToFFMPEG","")
+#            if not fp.PathToFFMPEG:
+#                FreeCAD.Console.PrintError("You must set the path to FFMPEG in order to make the animated gif\n")
+#                return False
+#        if not fp.PathToGif:
+#            macro_path = FreeCAD.getUserMacroDir(True)
+#            subfolder = "Animator/screen_grabs"
+#            fp.PathToGif = os.path.join(macro_path,subfolder)
+#        if not os.path.exists(fp.PathToGif):
+#            os.makedirs(fp.PathToGif)
+#        existing_pngs = glob.glob(os.path.join(fp.PathToGif,"*.png"))
+#        for file_path in existing_pngs:
+#            os.remove(file_path)
+#        if not fp.AnimatedGifFilename:
+#            FreeCAD.Console.PrintError("You must provide a name for the new animated gif file in the AnimatedGifFilename property\n")
+#            return False
+#        return True #success
+#
+#    def makeGifFrame(self,fp, frame):
+#        """called during animation loop.  Makes the screen shot for the current frame"""
+#        if not hasattr(fp,"MakeGif") or not fp.MakeGif:
+#            return
+#        screenshot_file = os.path.join(fp.PathToGif,f"frame_{frame:03d}.png")
+#        if fp.FitAllEachFrame:
+#            FreeCADGui.SendMsgToActiveView("ViewFit")
+#        if os.path.exists(screenshot_file):
+#            os.remove(screenshot_file)
+#        FreeCADGui.ActiveDocument.ActiveView.saveImage(screenshot_file, fp.GifWidth, fp.GifHeight, fp.BGColor)
+#
+#    def makeGif(self,fp):
+#        """make the final animated gif from all the screen shot frames"""
+#        output_gif = os.path.join(fp.PathToGif,fp.AnimatedGifFilename)
+#        if os.path.exists(output_gif):
+#            os.remove(output_gif)
+#        frame_duration = fp.GifFrameRate / 1000.0
+#        path_to_ffmpeg = fp.PathToFFMPEG
+#        ffmpeg_command = [
+#           path_to_ffmpeg,
+#           "-framerate", f"1/{frame_duration}",
+#           "-i", os.path.join(fp.PathToGif, "frame_%03d.png"),
+#           "-y", #overwrite output_gif if it exits
+#           output_gif
+#        ]
+#        subprocess.run(ffmpeg_command)
+#        FreeCAD.Console.PrintMessage(f"{output_gif} created.\n")
+#
 #
 #    def readMacroFile(self,fp):
 #        if DEBUG:
@@ -172,7 +251,6 @@ __version__ = "0.2023.09.12e"
 #            self.isAnimating = False
 #            raise
 #
-#
 #    def getPermissionFromUser(self,fp,bRunMacroString=False):
 #        msgBox = QtGui.QMessageBox()
 #        msgBox.setWindowTitle("Animator Macro Security Warning")
@@ -184,18 +262,35 @@ __version__ = "0.2023.09.12e"
 #            msgBox.setText("Warning: Contents of property Macro String will be executed as python code")
 #            info = "Do you want to execute the contents of this string?\n\n"
 #        info += "DO NOT ALLOW IF YOU GOT THIS FILE FROM AN UNTRUSTED SOURCE!!!\n\n"
-#        info += "Note: if Reset After Animation is True (the default) any document objects "
-#        info += "created by the macro will be removed after animation is complete.\n\n"
-#        info += "These objects can be restored using Redo in FreeCAD (Ctrl + Y).\n"
 #        msgBox.setInformativeText(info)
-#        msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
-#        msgBox.setDefaultButton(QtGui.QMessageBox.No)
-#        ret = msgBox.exec();
+#        msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Help)
+#        yesBtn = msgBox.button(QtGui.QMessageBox.StandardButton.Yes)
+#        noBtn = msgBox.button(QtGui.QMessageBox.StandardButton.No)
+#        helpBtn = msgBox.button(QtGui.QMessageBox.StandardButton.Help)
+#        helpBtn.setText("Show me the code, but do not run")
+#        yesBtn.setText("Yes, run python code")
+#        noBtn.setText("No, do not run python code")
+#        ret = msgBox.exec()
 #        if ret == QtGui.QMessageBox.Yes:
 #            self.macroPermissions += 1
-#        else: #permission denied
+#        elif ret == QtGui.QMessageBox.No: #permission denied
 #            self.macroPermissions = 0
-#        return ret == QtGui.QMessageBox.Yes
+#            return False
+#        elif ret == QtGui.QMessageBox.Help: #show code
+#            msgBox2 = QtGui.QDialog()
+#            layout = QtGui.QVBoxLayout()
+#            text_browser = QtGui.QTextBrowser()
+#            if bRunMacroString:
+#                text_browser.setPlainText(self.stringToRunFromMacroString)
+#            else:
+#                text_browser.setPlainText(self.stringToRun)
+#            layout.addWidget(text_browser)
+#            ok = QtGui.QPushButton("OK")
+#            msgBox2.setWindowTitle("Animator: Code to run:")
+#            ok.clicked.connect(msgBox2.accept)
+#            msgBox2.setLayout(layout)
+#            ret = msgBox2.exec_()
+#            return False
 #
 #    def startAnimating(self, skip_permission = False):
 #        self.isAnimating = True
@@ -239,6 +334,10 @@ __version__ = "0.2023.09.12e"
 #            FreeCAD.Console.PrintMessage(f"Animator: using these constraints: {uncommented}"+chr(10))
 #        if hasattr(fp,"CurrentFrame"):
 #            fp.CurrentFrame = 0 #use this to ensure we have undone everything later
+#        if hasattr(fp, "MakeGif") and fp.MakeGif:
+#            if not self.setupGifFolder(fp): #returns false if some animated gif properties are not properly configured
+#                FreeCAD.Console.PrintError("Error setting up animation folder.\n")
+#                return
 #        fp.Document.openTransaction("Reset animated objects")
 #        while (counter <= fp.Frames and not fp.StopAnimating):
 #            if hasattr(fp,"CurrentFrame"):
@@ -266,6 +365,10 @@ __version__ = "0.2023.09.12e"
 #                self.runString(counter == fp.Frames)
 #            if hasattr(fp,"RunMacroString") and fp.RunMacroString and fp.MacroString != DEFAULT_MACRO_STRING:
 #                self.runString(counter == fp.Frames, bRunMacroString=True)
+#            if hasattr(fp,"MakeGif") and fp.MakeGif:
+#                self.makeGifFrame(fp,counter) #make the current frame
+#                if counter == fp.Frames:
+#                    self.makeGif(fp) #make animated gif
 #            FreeCADGui.updateGui()
 #            time.sleep(fp.Sleep)
 #            counter += 1
@@ -326,7 +429,8 @@ __version__ = "0.2023.09.12e"
 #    def getProperties(self,fp,obj):
 #        '''get the supported properties of obj'''
 #        if obj.TypeId != "Spreadsheet::Sheet":
-#            props = [prop for prop in obj.PropertiesList if self.isSupportedType(fp,obj.getTypeIdOfProperty(prop)) and  bool(obj.getEditorMode(prop) == [] or prop == "AttachmentOffset" or prop == "Placement")]
+#            props = [prop for prop in obj.PropertiesList if self.isSupportedType(fp,obj.getTypeIdOfProperty(prop)) \
+#                     and  bool(obj.getEditorMode(prop) == [] or prop == "AttachmentOffset" or prop == "Placement")]
 #        else:
 #            props = [prop for prop in obj.PropertiesList if self.isSupportedType(fp,obj.getTypeIdOfProperty(prop))]
 #        return props
