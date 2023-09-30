@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.2023.09.29"
-#__version__ = "0.2023.09.29"
+__version__ = "0.2023.09.30"
+#__version__ = "0.2023.09.30"
 ##Animator, 2023, by <TheMarkster>, LGPL2.1 or later
 ##Credit to Dan Miel for some of the A2Plus-related stuff
 #DEBUG = False
@@ -29,17 +29,19 @@ __version__ = "0.2023.09.29"
 #"#fp.CurrentFrame = current frame in animation loop",\
 #"#AnimatorLastFrame = True if current frame is last frame in loop",\
 #"#cam = active view's camera object",\
-#"#cam.setPosition(x,y,z) # or cam.setPosition(vector), cam.getPosition()-> vector",\
-#"#cam.setOrientation(axis,angle) #or cam.setOrientationEuler(yaw,pitch,roll)",\
-#"#cam.getOrientation()# -> (axis,angle), cam.getOrientationEuler -> (yaw,pitch,roll)",\
-#"#cam.setHeight(float)# cam.getHeight() -> float",\
-#"#cam.getFocalDistance(), cam.getAspectRatio(), cam.getNearDistance(), cam.getFarDistance()",\
+#"#cam.Position -> vector, cam.Position = (x,y,z) or cam.Position = vector",\
+#"#cam.Orientation -> returns a tuple (axis,angle), or set with cam.Orientation = (axis,angle) or camOrientation = rot (a FreeCAD.Rotation)",\
+#"#cam.OrientationEuler -> (yaw, pitch, roll), cam.OrientationEuler = (yaw,pitch,roll)",\
+#"#cam.Height, cam.FocalDistance, cam.AspectRatio, cam.NearDistance, cam.FarDistance, (all floats)",\
+#"#cam.Placement -> FreeCAD.Placement object",\
 #]
 
 #class Animator:
 #    def __init__(self, obj):
 #        animv = "Animator.v"+__version__
-#        obj.addProperty("App::PropertyBool","FreezeCamera",animv,"Keep camera position each frame").FreezeCamera = False
+#        obj.addProperty("App::PropertyBool","FreezeCamera","Camera","Keep camera position each frame").FreezeCamera = False
+#        obj.addProperty("App::PropertyLink","CamPlacementObject","Camera","Sets cam to this object's placement each frame in the loop")
+#        obj.addProperty("App::PropertyBool","ReverseCam","Camera","Reverses camera orientation, applicable only if CamPlacementObject is set").ReverseCam = False
 #        obj.addProperty("App::PropertyBool","MakeGif","AnimatedGif","Make an animated gif using ffmpeg (requires ffmpeg binary be installed)").MakeGif = False
 #        obj.addProperty("App::PropertyFile","PathToFFMPEG","AnimatedGif","Browse to locate the ffmpeg binary with this property")
 #        pg = FreeCAD.ParamGet("User parameter:Plugins/Animator_Macro")
@@ -315,6 +317,15 @@ __version__ = "0.2023.09.29"
 #    def startAnimating(self, skip_permission = False):
 #        self.isAnimating = True
 #        fp = FreeCAD.ActiveDocument.getObject(self.fpName)
+#        cam = None
+#        camObj = None
+#        if hasattr(fp,"CamPlacementObject") and fp.CamPlacementObject:
+#            camObj = fp.CamPlacementObject
+#            if not hasattr(camObj,"Placement"):
+#                FreeCAD.Console.PrintError("Cam Placement Object has no Placement property!\n")
+#            else:
+#                cam = Camera()
+#                cam.Placement = camObj.Placement
 #        animated = 0 #check if there is any animation work to do
 #        if hasattr(fp,"RunMacro") and fp.RunMacro and fp.MacroFile:
 #            self.readMacroFile(fp)
@@ -369,6 +380,13 @@ __version__ = "0.2023.09.29"
 #            if hasattr(fp,"CurrentFrame"):
 #                fp.CurrentFrame = counter
 #            QtGui.QApplication.instance().processEvents()
+#            if cam and camObj:
+#                if not fp.ReverseCam:
+#                    cam.Placement = camObj.Placement
+#                else:
+#                    plm = camObj.Placement
+#                    plm.Rotation = plm.Rotation.multiply(FreeCAD.Rotation(FreeCAD.Vector(0,0,1),math.pi))
+#                    cam.Placement = plm
 #            for jj in range(1,fp.VariableCount+1):
 #                if variables[jj][0] != "Select Property":
 #                    nth = counter % variables[jj][3] #remainder of dividing counter by Nth property
@@ -605,6 +623,10 @@ __version__ = "0.2023.09.29"
 #        self.focalDistanceStr = ""
 #        self.parse()
 #
+#    def __repr__(self):
+#        self.refresh()
+#        return self.camera
+#
 #    def refresh(self):
 #        """refresh some internal variables"""
 #        self.camera = self.view.getCamera()
@@ -620,44 +642,52 @@ __version__ = "0.2023.09.29"
 #        self.refresh()
 #        return self.cam_type
 #
-#    def getNearDistance(self):
+#    @property
+#    def NearDistance(self):
 #        """nearDistance sets clipping plane for near objects"""
 #        self.refresh()
 #        return float(self.nearDistance)
 #
-#    def getFarDistance(self):
+#    @property
+#    def FarDistance(self):
 #        """farDistance sets clipping plane for far objects"""
 #        self.refresh()
 #        return float(self.farDistance)
 #
-#    def setNearDistance(self,val):
+#    @NearDistance.setter
+#    def NearDistance(self,val):
 #        """nearDistance sets clipping plane for near objects"""
 #        self.refresh()
 #        self.nearDistance = str(val)
 #        self.unParse()
 #
-#    def setFarDistance(self,val):
+#    @FarDistance.setter
+#    def FarDistance(self,val):
 #        """farDistance sets clipping plane for far objects"""
 #        self.refresh()
 #        self.farDistance = str(val)
 #        self.unParse()
 #
-#    def getAspectRatio(self):
+#    @property
+#    def AspectRatio(self):
 #        """width to height ratio"""
 #        self.refresh()
 #        return float(self.aspectRatio)
 #
-#    def setAspectRatio(self, val):
+#    @AspectRatio.setter
+#    def AspectRatio(self, val):
 #        """width to height ratio, must be greater than 0"""
 #        self.refresh()
 #        self.aspectRatio = str(val)
 #        self.unParse()
 #
-#    def getFocalDistance(self):
+#    @property
+#    def FocalDistance(self):
 #        """distance form viewpoint to point of focus, usually ignored"""
 #        self.refresh()
 #        return float(self.focalDistance)
 #
+#    @FocalDistance.setter
 #    def setFocalDistance(self,val):
 #        """distance form viewpoint to point of focus, usually ignored"""
 #        self.refresh()
@@ -703,19 +733,22 @@ __version__ = "0.2023.09.29"
 #        self.camera = new_cam
 #        self.view.setCamera(self.camera)
 #
-#    def getHeight(self):
+#    @property
+#    def Height(self):
 #        """height of the camera above scene"""
 #        self.refresh()
 #        height = float(self.height)
 #        return height
 #
-#    def setHeight(self, height):
+#    @Height.setter
+#    def Height(self, height):
 #        """height of camera above scene"""
 #        self.refresh()
 #        self.height = str(height)
 #        self.unParse()
 #
-#    def getPosition(self):
+#    @property
+#    def Position(self):
 #        """returns a vector of the current camera position"""
 #        self.refresh()
 #        position_str = self.position
@@ -723,17 +756,16 @@ __version__ = "0.2023.09.29"
 #        position = FreeCAD.Vector(*position_values)
 #        return position
 #
-#    def setPosition(self, vector, float2 = None, float3 = None):
-#        """set camera position, accepts as argument vector or 3 floats"""
+#    @Position.setter
+#    def Position(self, vector):
+#        """set camera position, vector can be FreeCAD.Vector or (x,y,z) tuple"""
 #        self.refresh()
-#        if not float2 and not float3:
-#            new_position_str = ' '.join([str(val) for val in vector])
-#        else:
-#            new_position_str = f"{vector} {float2} {float3}"
+#        new_position_str = ' '.join([str(val) for val in vector])
 #        self.position = new_position_str
 #        self.unParse()
 #
-#    def getOrientation(self):
+#    @property
+#    def Orientation(self):
 #        """returns the orientation as a tuple containing (axis,angle) which is (vector, float in degrees)"""
 #        self.refresh()
 #        orientation_str = self.orientation
@@ -742,7 +774,8 @@ __version__ = "0.2023.09.29"
 #        angle = math.degrees(vals[3])
 #        return (axis,angle)
 #
-#    def getOrientationEuler(self):
+#    @property
+#    def OrientationEuler(self):
 #        """cam orientation returns (yaw,pitch,roll)"""
 #        self.refresh()
 #        axis,angle = self.getOrientation()
@@ -750,17 +783,46 @@ __version__ = "0.2023.09.29"
 #        euler_angles = rot.getYawPitchRoll()
 #        return euler_angles
 #
-#    def setOrientation(self, axis, angle):
-#        """sets orientation, setOrientation(axis,angle), which is (vector, float in degrees)"""
+#    @Orientation.setter
+#    def Orientation(self, orientation_data):
+#        """sets orientation, setOrientation(axis, angle), which is (vector, float in degrees) or setOrientation(Rotation)"""
+#        isRotation = isinstance(orientation_data,FreeCAD.Rotation)
+#        if not isRotation and len(orientation_data) != 2:
+#            raise ValueError("Orientation must be a tuple or list containing (axis, angle), or a FreeCAD.Rotation")
+#
+#        axis, angle = orientation_data
 #        self.refresh()
-#        self.orientation = f"{axis.x} {axis.y} {axis.z} {math.radians(angle)}"
+#        if not isRotation:
+#            self.orientation = f"{axis.x} {axis.y} {axis.z} {math.radians(angle)}"
+#        else:
+#            self.orientation = f"{axis.x} {axis.y} {axis.z} {angle}" #angle in radians already if from a FreeCAD.Rotation object.
 #        self.unParse()
 #
-#    def setOrientationEuler(self, yaw, pitch, roll):
+#    @OrientationEuler.setter
+#    def OrientationEuler(self, ypr_tuple):
 #        """setOrientationEular(yaw,pitch,roll) (3 floats)"""
 #        self.refresh()
+#        if not len(ypr_tuple) == 3:
+#            raise ValueError("Use a tuple of floats to set OrientationEuler, e.g. cam.OrientationEuler = (yaw,pitch,roll)")
+#        yaw,pitch,roll = ypr_tuple
 #        rotation = FreeCAD.Rotation(float(yaw), float(pitch), float(roll))
 #        self.setOrientation(rotation.Axis, math.degrees(rotation.Angle))
+#
+#    @property
+#    def Placement(self):
+#        rot = FreeCAD.Rotation(self.Orientation)
+#        pos = self.Position
+#        plm = FreeCAD.Placement(pos,rot)
+#        return plm
+#
+#    @Placement.setter
+#    def Placement(self,plm):
+#        rot = plm.Rotation
+#        pos = plm.Base
+#        axis = rot.Axis
+#        angle = math.degrees(rot.Angle)
+#        self.Orientation = axis,angle
+#        self.Position = pos
 #
 #
 #
@@ -1002,12 +1064,17 @@ BASENAME = 'animator'
 
 def makeObject(FP):
 
-    doc = FreeCAD.ActiveDocument
+    doc = FreeCAD.ActiveDocument if FreeCAD.ActiveDocument else FreeCAD.newDocument()
     fp = doc.addObject("App::FeaturePython","Animator")
     FP.Animator(fp)
     FP.AnimatorVP(fp.ViewObject)
     fp.Proxy.setupVariables(fp)
     fp.Proxy.setupA2PlusConstraints(fp)
+    sel = FreeCADGui.Selection.getSelection()
+    if sel:
+        obj = sel[0]
+        if hasattr(obj,"Placement"):
+            fp.CamPlacementObject = obj
 
 
 #################
