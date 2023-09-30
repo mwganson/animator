@@ -66,6 +66,18 @@ Executes the Assembly workbench solver each step through the loop if True.  Be s
 List of found A2Plus constraints in the current document.  You might need to toggle Refresh to update from time to time if new constraints are added.  Put a python style comment character pound (#) as first character of line to not solve that constraint (or you may also just delete it from the list).  New constraints may be typed in, but ensure the spelling is exactly correct.  Note: [] empty list means solve all constraints.
 ### A2PlusRefreshConstraints (bool)
 If True, when Refresh is toggled, then the A2Plus constraints will also be updated.  (Warning: this will overwrite any python style comments on any of the lines.)  Set this to False if you want to refresh the other variables in the document, but not the A2Plus Constraints.
+## Camera section
+We can control the camera during an animation in a number of ways.  One way is programming the changes in a python script using the cam object.  Another is by setting the Cam Placement Object to follow a given object with the camera as that object moves during the animation.
+### Cam Placement Object (link)
+During the animation the camera's placement will be updated to match this object's placement.  For example, if you have a sketch attached to a bspline and you set the MapPathParameter during the animation to move the sketch along that bspline, then you can link the camera to the sketch using this property and have the camera follow the sketch.
+
+Example:<pre>
+sk01 = doc.getObject("Sketch001")
+sk01.MapPathParameter = fp.CurrentFrame/fp.Frames</pre>
+### Freeze Camera (boolean)
+Default: False.  If True, this will make a copy of the camera's properties before the animation began, and reset it to those same properties during each frame of the animation.  If something you are doing during the animation is causing the camera to move, for example, to zoom out or in, then maybe this will help keep the camera from doing that.
+### Reverse Cam (boolean)
+Default: False.  If True, this will reverse the direction of the camera.  It's only applicable when using Cam Placement Object.
 ## Run Macro
 Here we have properties related to the feature of allowing to run an arbitrary macro file (or code string in the Macro String property) each frame of the animation.  This is obviously a security risk, so the user is required to give permission each time the animation is started.  This permission dialog can be bypassed by starting the animation from the python console and passing a value of True to the function.  Select the animator icon in the tree, press Ctrl+Shift+P.  Then in the python console enter<br/>
 <br/>
@@ -135,6 +147,7 @@ cam.FarDistance = 10 #set FarDistance to 10 mm.  Note: Near and FarDistance set 
 cam.Position = (x,y,z)# or cam.Position = FreeCAD.Vector(x,y,z)
 pos = cam.Position #pos is a FreeCAD.Vector   
 </pre>
+
 
 ### Run Macro String (boolean)
 Default: True.  Set to False if you don't want to run the string in Macro String each time through the loop.  (Note: The string is not run if it contains the default values, which are all just comments, anyway.)
