@@ -126,7 +126,14 @@ cam.Orientation = (axis,angle) #where axis is a vector object and angle is the a
 cam.Orientation = rot #where rot is a FreeCAD.Rotation
 axis,angle = cam.Orientation #always this returns the tuple
 rot = FreeCAD.Rotation(*cam.Orientation) #should create the rotation if you want it in that form.
-
+height = cam.Height
+AspectRatio = cam.AspectRatio
+FocalDistance = cam.FocalDistance #probably not used except by rendering software
+nearDistance = cam.NearDistance
+cam.FarDistance = 10 #set FarDistance to 10 mm.  Note: Near and FarDistance set the clipping plane for near and far objects.
+#Objects closer than NearDistance are clipped and objects further way than FarDistance are clipped, meaning not shown.
+cam.Position = (x,y,z)# or cam.Position = FreeCAD.Vector(x,y,z)
+pos = cam.Position #pos is a FreeCAD.Vector   
 </pre>
 
 ### Run Macro String (boolean)
