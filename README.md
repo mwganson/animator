@@ -109,6 +109,25 @@ Assorted variables pre-defined for your use in your python code:<br/>
 ##### setExpression(idx,expr) -- sets the value of objs[idx] property props[idx] to expr.  Example, if Variable002 = "Cylinder.Radius", then setExpression(1,"2.5") sets Cylinder.Radius to the expression "2.5".  Other example: setExpression(1, "Box.Height")  The parameter idx is the index into the props and objs lists, which are 0-indexed.
 ##### getValue(idx) -- gets the value of the props[idx] at this point in the animation loop.  If you want to get and set values for a property easily in this manner, then select them for the various VariableNNN properties and set the VariableNNN Step property to 0.  That way they're not being animated in the loop, but your code has easy access to them for setting and retrieving values.
 ##### setStep(idx,val) -- sets the step value to val. Example: setStep(0,3) would set Variable001 Step = 3.0.  Note: if step = 0, then the property is not animated.  Note2: the animation "catches up" to where it would have been had step value been 3 the whole time in the previous example.  The property is set as start value + step value * counter (where counter is the number of the current frame).  It is better to set the property directly rather than using step unless this behavior is what you want.  For example, if you want to set Box.Height to its current value + 3 each time in the loop after having paused the loop for a time by setting step = 0, then set the box object's Height property directly: objs[0].setExpression("Height",str(objs[0].Height+3))
+##### cam (Camera object)
+The cam object can be used to manipulate the camera position and orientation, among other properties.  You can also use the Camera object in other macros by importing it from the animator.py file:
+<pre></pre>
+from animator import Camera
+cam = Camera()
+print(cam)
+</pre>
+The following properties are supported:
+Orientation, Placement, Position, Height, FocalDistance, NearDistance, FarDistance, AspectRatio, and OrientationEuler.
+
+Orientation is a FreeCAD.Rotation, Placement is a FreeCAD.Placement, Position is a FreeCAD.Vector, and OrientationEuler is a tuple (yaw,pitch,roll).  The others are all floats.  Some examples:
+<pre>
+cam.Placement = plm  #where plm is a FreeCAD.Placement
+cam.Orientation = (axis,angle) #where axis is a vector object and angle is the angle in degrees
+cam.Orientation = rot #where rot is a FreeCAD.Rotation
+axis,angle = cam.Orientation #always this returns the tuple
+rot = FreeCAD.Rotation(*cam.Orientation) #should create the rotation if you want it in that form.
+
+</pre>
 
 ### Run Macro String (boolean)
 Default: True.  Set to False if you don't want to run the string in Macro String each time through the loop.  (Note: The string is not run if it contains the default values, which are all just comments, anyway.)
