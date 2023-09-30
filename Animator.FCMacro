@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.2023.09.16"
-#__version__ = "0.2023.09.16"
+__version__ = "0.2023.09.29"
+#__version__ = "0.2023.09.29"
 ##Animator, 2023, by <TheMarkster>, LGPL2.1 or later
 ##Credit to Dan Miel for some of the A2Plus-related stuff
 #DEBUG = False
 #import FreeCAD, FreeCADGui, Part
 #import time
+#import math
+#import re
 #from pivy import coin
 #from PySide import QtCore, QtGui
 #import os, subprocess, glob
@@ -26,11 +28,18 @@ __version__ = "0.2023.09.16"
 #"#getValue(idx) = get value contained in VariableNNN where NNN is idx-1",\
 #"#fp.CurrentFrame = current frame in animation loop",\
 #"#AnimatorLastFrame = True if current frame is last frame in loop",\
+#"#cam = active view's camera object",\
+#"#cam.setPosition(x,y,z) # or cam.setPosition(vector), cam.getPosition()-> vector",\
+#"#cam.setOrientation(axis,angle) #or cam.setOrientationEuler(yaw,pitch,roll)",\
+#"#cam.getOrientation()# -> (axis,angle), cam.getOrientationEuler -> (yaw,pitch,roll)",\
+#"#cam.setHeight(float)# cam.getHeight() -> float",\
+#"#cam.getFocalDistance(), cam.getAspectRatio(), cam.getNearDistance(), cam.getFarDistance()",\
 #]
 
 #class Animator:
 #    def __init__(self, obj):
 #        animv = "Animator.v"+__version__
+#        obj.addProperty("App::PropertyBool","FreezeCamera",animv,"Keep camera position each frame").FreezeCamera = False
 #        obj.addProperty("App::PropertyBool","MakeGif","AnimatedGif","Make an animated gif using ffmpeg (requires ffmpeg binary be installed)").MakeGif = False
 #        obj.addProperty("App::PropertyFile","PathToFFMPEG","AnimatedGif","Browse to locate the ffmpeg binary with this property")
 #        pg = FreeCAD.ParamGet("User parameter:Plugins/Animator_Macro")
@@ -83,6 +92,7 @@ __version__ = "0.2023.09.16"
 #        self.stringToRun = "" #from macro file
 #        self.stringToRunFromMacroString = ""
 #        self.macroPermissions = 0 #you have to giver permission at least once each session
+#        self.cameraPosition = "" #used if FreezeCamera = True
 #        obj.Proxy = self
 #
 #    def getSubProperties(self,prop,typeId,obj):
@@ -193,6 +203,14 @@ __version__ = "0.2023.09.16"
 #        FreeCAD.Console.PrintMessage(f"{output_gif} created.\n")
 #
 #
+#    def getCameraPosition(self):
+#        v = FreeCADGui.activeView()
+#        self.cameraPosition = v.getCamera()
+#
+#    def restoreCameraPosition(self):
+#        v = FreeCADGui.activeView()
+#        v.setCamera(self.cameraPosition)
+#
 #    def readMacroFile(self,fp):
 #        if DEBUG:
 #            print("reading macro file")
@@ -228,6 +246,7 @@ __version__ = "0.2023.09.16"
 #        my_macro.Animator = fp
 #        my_macro.con = FreeCAD.Console
 #        my_macro.fp = fp
+#        my_macro.cam = Camera()
 #        my_macro.props = [getattr(fp,p) for p in fp.PropertiesList if "Enumeration" in fp.getTypeIdOfProperty(p) if getattr(fp,p) != 'Select Property']
 #        my_macro.objs = [fp.Document.getObject(p.split(".")[0]) for p in my_macro.props]
 #        my_macro.props = [p[p.index(".")+1:] for p in my_macro.props]
@@ -296,8 +315,10 @@ __version__ = "0.2023.09.16"
 #    def startAnimating(self, skip_permission = False):
 #        self.isAnimating = True
 #        fp = FreeCAD.ActiveDocument.getObject(self.fpName)
+#        animated = 0 #check if there is any animation work to do
 #        if hasattr(fp,"RunMacro") and fp.RunMacro and fp.MacroFile:
 #            self.readMacroFile(fp)
+#            animated += 1
 #            if not skip_permission or self.macroPermissions == 0:
 #                if not self.getPermissionFromUser(fp):
 #                    FreeCAD.Console.PrintWarning("Animator: Animation was canceled by user.\n")
@@ -305,13 +326,15 @@ __version__ = "0.2023.09.16"
 #                    return
 #        if hasattr(fp,"RunMacroString") and fp.RunMacroString and fp.MacroString != DEFAULT_MACRO_STRING:
 #            self.readMacroString(fp)
+#            animated += 1
 #            if not skip_permission or self.macroPermissions == 0:
 #                if not self.getPermissionFromUser(fp,bRunMacroString=True):
 #                    FreeCAD.Console.PrintWarning("Animator: Animation was canceled by user.\n")
 #                    self.isAnimating = False
 #                    return
 #        variables = {} #tuple ii:(prop,start,step)
-#        animated = 0
+
+#
 #        for ii in range(1,fp.VariableCount+1):
 #            variables[ii] = (getattr(fp,"Variable"+format(ii,'03')),getattr(fp,"Variable"+format(ii,'03')+"Start"),\
 #                             getattr(fp,"Variable"+format(ii,'03')+"Step"),getattr(fp,"Variable"+format(ii,'03')+"Nth"))
@@ -339,6 +362,8 @@ __version__ = "0.2023.09.16"
 #            if not self.setupGifFolder(fp): #returns false if some animated gif properties are not properly configured
 #                FreeCAD.Console.PrintError("Error setting up animation folder.\n")
 #                return
+#        if hasattr(fp,"FreezeCamera") and fp.FreezeCamera:
+#            self.getCameraPosition()
 #        fp.Document.openTransaction("Reset animated objects")
 #        while (counter <= fp.Frames and not fp.StopAnimating):
 #            if hasattr(fp,"CurrentFrame"):
@@ -371,6 +396,8 @@ __version__ = "0.2023.09.16"
 #                if counter == fp.Frames:
 #                    self.makeGif(fp) #make animated gif
 #            FreeCADGui.updateGui()
+#            if hasattr(fp,"FreezeCamera") and fp.FreezeCamera:
+#                self.restoreCameraPosition()
 #            time.sleep(fp.Sleep)
 #            counter += 1
 #        fp.Document.commitTransaction()
@@ -426,6 +453,11 @@ __version__ = "0.2023.09.16"
 #            return False
 #        else:
 #            return True
+#
+#    def editMacroString(self):
+#        fp = FreeCAD.ActiveDocument.getObject(self.fpName)
+#        dlg = MacroStringEditor(fp)
+#        dlg.exec_()
 #
 #    def getProperties(self,fp,obj):
 #        '''get the supported properties of obj'''
@@ -483,6 +515,254 @@ __version__ = "0.2023.09.16"
 #        self.properties = ["Select Property"] + self.properties
 #
 #
+#class PythonSyntaxHighlighter(QtGui.QSyntaxHighlighter):
+#    def __init__(self, parent=None):
+#        super().__init__(parent)
+#        self.highlighting_rules = []
+#        variable_format = QtGui.QTextCharFormat()
+#        variable_format.setForeground(QtGui.QColor(255, 170, 0))  # Yellow color for variables
+#        variable_format.setFontWeight(QtGui.QFont.Bold)
+#        self.highlighting_rules.append((r'\b\w+\b', variable_format))
+#
+#        keyword_format = QtGui.QTextCharFormat()
+#        keyword_format.setForeground(QtGui.QColor(0, 0, 255))  # Blue color for keywords
+#        keyword_format.setFontWeight(QtGui.QFont.Bold)
+#        self.highlighting_rules.append((r'\b(?:import|from|def|class|if|else|for|while|return|break|continue)\b',\
+#                                          keyword_format))
+#
+#        comment_format = QtGui.QTextCharFormat()
+#        comment_format.setForeground(QtGui.QColor(0, 170, 0))  # Green color for comments
+#        self.highlighting_rules.append((r'#.*$', comment_format))
+#
+#        string_format = QtGui.QTextCharFormat()
+#        string_format.setForeground(QtGui.QColor(255,0,0))  # red color for strings
+#        self.highlighting_rules.append((r'".*?"', string_format))
+#
+#        numeral_format = QtGui.QTextCharFormat()
+#        numeral_format.setForeground(QtGui.QColor(0,0,255))  # Blue color for numerals
+#        self.highlighting_rules.append((r'\b\d+\b', numeral_format))
+#
+#        operator_format = QtGui.QTextCharFormat()
+#        operator_format.setForeground(QtGui.QColor(160, 160, 164))  # Color for operators
+#        self.highlighting_rules.append((r'[-+,:*/%=<>&|!^]', operator_format))
+#
+#    def highlightBlock(self, text):
+#        for pattern, char_format in self.highlighting_rules:
+#            regex = re.compile(pattern)
+#            for match in regex.finditer(text):
+#                self.setFormat(match.start(), match.end() - match.start(), char_format)
+#
+#
+#class MacroStringEditor(QtGui.QDialog):
+#    def __init__(self,fp,parent=FreeCADGui.getMainWindow()):
+#        super().__init__(parent)
+#        self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
+#        self.setAttribute(QtCore.Qt.WA_WindowPropagation, True)
+#        self.fp = fp
+#        layout = QtGui.QVBoxLayout()
+#        self.setLayout(layout)
+#        self.editor = QtGui.QPlainTextEdit()
+#        self.editor.setPlainText("\n".join(fp.MacroString))
+#        self.editor.setMinimumWidth(600)
+#        self.editor.setMinimumHeight(600)
+#        highlighter = PythonSyntaxHighlighter(self.editor.document())
+#        layout.addWidget(self.editor)
+#        buttons = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
+#        buttons.accepted.connect(self.accept)
+#        buttons.rejected.connect(self.reject)
+#        layout.addWidget(buttons)
+#
+#    def accept(self):
+#        self.fp.MacroString = self.editor.toPlainText().splitlines()
+#        self.fp.Document.recompute()
+#        super().accept()
+#
+#    def reject(self):
+#        print("rejected")
+#        super().reject()
+#
+#
+#
+#class Camera:
+#    def __init__(self):
+#        # Get the active view and camera
+#        self.view = FreeCADGui.activeView()
+#        self.camera = self.view.getCamera()
+#        self.height = ""
+#        self.orientation = ""
+#        self.position = ""
+#        self.header = ""
+#        self.cam_type = ""
+#        self.nearDistance = ""
+#        self.farDistance = ""
+#        self.aspectRatioStr = ""
+#        self.aspectRatio = ""
+#        self.focalDistance = ""
+#        self.mappingStr = ""
+#        self.posStr = ""
+#        self.orientationStr = ""
+#        self.heightStr = ""
+#        self.focalDistanceStr = ""
+#        self.parse()
+#
+#    def refresh(self):
+#        """refresh some internal variables"""
+#        self.camera = self.view.getCamera()
+#        self.parse()
+#
+#    def getHeader(self):
+#        """returns the version of Open Inventor"""
+#        self.refresh()
+#        return self.header
+#
+#    def getType(self):
+#        """returns Orthographic or Perspective"""
+#        self.refresh()
+#        return self.cam_type
+#
+#    def getNearDistance(self):
+#        """nearDistance sets clipping plane for near objects"""
+#        self.refresh()
+#        return float(self.nearDistance)
+#
+#    def getFarDistance(self):
+#        """farDistance sets clipping plane for far objects"""
+#        self.refresh()
+#        return float(self.farDistance)
+#
+#    def setNearDistance(self,val):
+#        """nearDistance sets clipping plane for near objects"""
+#        self.refresh()
+#        self.nearDistance = str(val)
+#        self.unParse()
+#
+#    def setFarDistance(self,val):
+#        """farDistance sets clipping plane for far objects"""
+#        self.refresh()
+#        self.farDistance = str(val)
+#        self.unParse()
+#
+#    def getAspectRatio(self):
+#        """width to height ratio"""
+#        self.refresh()
+#        return float(self.aspectRatio)
+#
+#    def setAspectRatio(self, val):
+#        """width to height ratio, must be greater than 0"""
+#        self.refresh()
+#        self.aspectRatio = str(val)
+#        self.unParse()
+#
+#    def getFocalDistance(self):
+#        """distance form viewpoint to point of focus, usually ignored"""
+#        self.refresh()
+#        return float(self.focalDistance)
+#
+#    def setFocalDistance(self,val):
+#        """distance form viewpoint to point of focus, usually ignored"""
+#        self.refresh()
+#        self.focalDistance = str(val)
+#        self.unParse()
+#
+#    def parse(self):
+#        """parse camera string into separate self.values, called by refresh()"""
+#        d = self.camera.split()
+#        try:
+#            self.header = d[0]+' '+d[1] + ' '+d[2] # '#Inventor v2.1 ascii'
+#            self.cam_type = d[3] #'OrthographicCamera' #d[4] = '{'
+#            self.mappingStr = d[5] #viewportMapping
+#            self.mapping = d[6] #ADJUST_CAMERA
+#            self.posStr = d[7] #'position'
+#            self.position = d[8] + ' '+d[9]+' ' + d[10]
+#            self.orientationStr = d[11] #'orientation'
+#            self.orientation = d[12]+' '+d[13]+' '+d[14]+'  '+d[15]
+#            self.nearDistanceStr = d[16]#'nearDistance'
+#            self.nearDistance = d[17]
+#            self.farDistanceStr = d[18]#'farDistance'
+#            self.farDistance = d[19] #13.163915
+#            self.aspectRatioStr = d[20]#'aspectRatio'
+#            self.aspectRatio = d[21] #1
+#            self.focalDistanceStr = d[22] #'focalDistance'
+#            self.focalDistance = d[23]
+#            self.heightStr = d[24]
+#            self.height = d[25]
+#        except:
+#            FreeCAD.Console.PrintError("Failed to parse camera data\n")
+#
+#    def unParse(self):
+#        """write the self.values into the camera string, set camera to it"""
+#        new_cam = self.header + '\n' + self.cam_type + '{\n' + self.mappingStr+' '+self.mapping+'\n'\
+#        + self.posStr + ' ' + self.position + '\n' \
+#        + self.orientationStr + ' ' + self.orientation + '\n'\
+#        + self.nearDistanceStr + ' ' + self.nearDistance + '\n'\
+#        + self.farDistanceStr + ' ' + self.farDistance + '\n'\
+#        + self.aspectRatioStr + ' ' + self.aspectRatio + '\n'\
+#        + self.focalDistanceStr + ' ' + self.focalDistance + '\n'\
+#        + self.heightStr + ' ' + self.height + '\n'\
+#        + '}\n'
+#        self.camera = new_cam
+#        self.view.setCamera(self.camera)
+#
+#    def getHeight(self):
+#        """height of the camera above scene"""
+#        self.refresh()
+#        height = float(self.height)
+#        return height
+#
+#    def setHeight(self, height):
+#        """height of camera above scene"""
+#        self.refresh()
+#        self.height = str(height)
+#        self.unParse()
+#
+#    def getPosition(self):
+#        """returns a vector of the current camera position"""
+#        self.refresh()
+#        position_str = self.position
+#        position_values = [float(val) for val in position_str.split()]
+#        position = FreeCAD.Vector(*position_values)
+#        return position
+#
+#    def setPosition(self, vector, float2 = None, float3 = None):
+#        """set camera position, accepts as argument vector or 3 floats"""
+#        self.refresh()
+#        if not float2 and not float3:
+#            new_position_str = ' '.join([str(val) for val in vector])
+#        else:
+#            new_position_str = f"{vector} {float2} {float3}"
+#        self.position = new_position_str
+#        self.unParse()
+#
+#    def getOrientation(self):
+#        """returns the orientation as a tuple containing (axis,angle) which is (vector, float in degrees)"""
+#        self.refresh()
+#        orientation_str = self.orientation
+#        vals = [float(val) for val in orientation_str.split()]
+#        axis = FreeCAD.Vector(vals[0],vals[1],vals[2])
+#        angle = math.degrees(vals[3])
+#        return (axis,angle)
+#
+#    def getOrientationEuler(self):
+#        """cam orientation returns (yaw,pitch,roll)"""
+#        self.refresh()
+#        axis,angle = self.getOrientation()
+#        rot = FreeCAD.Rotation(axis, angle)
+#        euler_angles = rot.getYawPitchRoll()
+#        return euler_angles
+#
+#    def setOrientation(self, axis, angle):
+#        """sets orientation, setOrientation(axis,angle), which is (vector, float in degrees)"""
+#        self.refresh()
+#        self.orientation = f"{axis.x} {axis.y} {axis.z} {math.radians(angle)}"
+#        self.unParse()
+#
+#    def setOrientationEuler(self, yaw, pitch, roll):
+#        """setOrientationEular(yaw,pitch,roll) (3 floats)"""
+#        self.refresh()
+#        rotation = FreeCAD.Rotation(float(yaw), float(pitch), float(roll))
+#        self.setOrientation(rotation.Axis, math.degrees(rotation.Angle))
+#
+#
 #
 #class AnimatorVP:
 #    def __init__(self, obj):
@@ -513,6 +793,9 @@ __version__ = "0.2023.09.16"
 #         text = {True:"Start Animating %1",False:"Stop Animating %1"}
 #         action = menu.addAction(text[vobj.Object.StopAnimating].replace("%1",vobj.Object.Label))
 #         action.triggered.connect(lambda: setattr(vobj.Object,"StopAnimating",True))
+#         text = "Edit Macro String"
+#         action = menu.addAction(text)
+#         action.triggered.connect(vobj.Object.Proxy.editMacroString)
 #
 #    def updateData(self, fp, prop):
 #        '''If a property of the handled feature has changed we have the chance to handle this here'''
