@@ -5,7 +5,7 @@ FreeCAD Macro to animate a model.  Run the macro to create an Animator feature p
 <img src="Animator.svg" alt="toolbar icon"><a href="Animator.svg">Download</a> the toolbar icon.
 
 ## Installation
-Install with the Addon Manager.  On first run it will offer to create a file (animator.py).  This new file is needed in order for FreeCAD to be able to load the class definitions needed by the Animator objects when opening a file containing one of the saved objects.  When you uninstall Animator you must manually remove the animatory.py file.
+Install with the Addon Manager.  *Update: as of version 0.2026.09.06 it no longer creates the extra .py file, instead the Addon Manager installs the .py file itself and there is only that file.  Do not use the .FCMacro file anymore.  You can delete that file to make sure you don't accidentally use it again.*  ~On first run it will offer to create a file (animator.py).  This new file is needed in order for FreeCAD to be able to load the class definitions needed by the Animator objects when opening a file containing one of the saved objects.  When you uninstall Animator you must manually remove the animatory.py file.~
 
 ## Properties
 Like all feature python objects the Animator objects are controlled largely by editing their properties in the property view.  Some of the boolean properties act as triggers for commands.  When toggling a trigger from False to True the command is executed and the trigger sets itself back to False, awaiting the next trigger.
@@ -164,6 +164,9 @@ These are the objects that will not appear in the VariableNNN property lists.  B
 ### Supported (string list)
 These are the supported properties.  You may add another property type to the list to add support for it, but if the new property type has subproperties, then it will not function correctly.  Ping me on the forum <TheMarkster> and I will see about adding the new support for the new property type for you.  Other than that, the new property should (hopefully) work just by adding it.  Just remember it must be something that will accept incrementing by a floating point value.  You can test this in the python console by entering:  obj.setExpression("PropertyName","0.1") where obj is the object containing the property, "PropertyName" is the name of the property, and "0.1" is the value you wish to set it to.  If this works, then adding the property type to the Supported list should also work.  To determine the property type, right click on the property and select Show All from the context menu.  Then hover your mouse over the property name to see the tooltip showing it's property name, usually something like "App::PropertyFloat."
 ## ChangeLog
+* 0.2026.09.06<br/>
+** Transition to single .py file installation, no more Animator.FCMacro file. Delete your old one so you don't accidentally run it or rename it in case you have trouble with the new version.
+** If ShowProgress = True we set Label2 visible (not visible by default in FreeCAD) temporarily during animation, and then restore it back to the previous setting after the animation finishes.
 * 0.2023.09.30c<br/>
 ** bug fixes in cam.OrienationEuler functions
 * 0.2023.09.30b<br/>
