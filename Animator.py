@@ -1,5 +1,5 @@
 #-*- coding: utf-8 -*-
-__version__ = "0.2026.09.06"
+__version__ = "0.2026.09.09"
 
 #Animator, 2023, by <TheMarkster>, LGPL2.1 or later
 #Credit to Dan Miel for some of the A2Plus-related stuff
@@ -10,7 +10,12 @@ import math
 import re
 from pivy import coin
 from PySide import QtCore, QtGui
-import os, subprocess, glob
+import os, subprocess, glob, shutil
+
+#ignore warning for a known issue in SWIG versions prior to 4.4
+import warnings
+warnings.filterwarnings("ignore", message="builtin type.*has no __module__ attribute")
+
 try:
     import a2p_solversystem
     a2p_present = True
@@ -147,10 +152,88 @@ prop+".A41",prop+".A42",prop+".A43",prop+".A44"]
             self.readMacroString(fp)
         elif "PathToFFMPEG" in prop and hasattr(fp,"PathToFFMPEG"):
             pg = FreeCAD.ParamGet("User parameter:Plugins/Animator_Macro")
-            pg.SetString("PathToFFMPEG",fp.PathToFFMPEG)
+            if os.path.exists(fp.PathToFFMPEG):
+                pg.SetString("PathToFFMPEG",fp.PathToFFMPEG)
         elif "PathToGif" in prop and hasattr(fp,"PathToGif"):
             pg = FreeCAD.ParamGet("User parameter:Plugins/Animator_Macro")
-            pg.SetString("PathToGif",fp.PathToGif)
+            if os.path.exists(fp.PathToGif):
+                pg.SetString("PathToGif",fp.PathToGif)
+
+    def find_ffmpeg(self):
+        #check system path first
+        ffmpeg = shutil.which("ffmpeg")
+        if not ffmpeg:
+
+            #then look for other common locations
+            ffmpeg_dirs = [
+                #linux
+                "/bin",
+                "/usr/bin",
+                "/usr/local/bin",
+                "/usr/sbin",
+                "/usr/local/sbin",
+                "/opt/bin",
+                "/opt/local/bin",
+                "/opt/ffmpeg/bin",
+                "/usr/local/ffmpeg/bin",
+                "/usr/local/ffmpeg",
+                "/opt/ffmpeg",
+                "/snap/bin",
+                "/var/lib/flatpak/exports/bin",
+                os.path.expanduser("~/.local/share/flatpak/exports/bin"),
+
+                #mac
+                "/opt/homebrew/bin",
+                "/usr/local/bin",
+                "/opt/local/bin",
+                "/sw/bin",
+
+                "/opt/homebrew/opt/ffmpeg/bin",
+                "/usr/local/opt/ffmpeg/bin",
+                "/opt/local/libexec/gnubin",
+
+                "/Applications/ffmpeg/bin",
+                "/Applications/FFmpeg/bin",
+                "/opt/ffmpeg/bin",
+
+                os.path.expanduser("~/.local/bin"),
+                os.path.expanduser("~/bin"),
+                os.path.expanduser("~/ffmpeg/bin"),
+
+                #windows
+                r"C:\ffmpeg\bin",
+                r"C:\FFmpeg\bin",
+                r"C:\Program Files\ffmpeg\bin",
+                r"C:\Program Files\FFmpeg\bin",
+                r"C:\Program Files (x86)\ffmpeg\bin",
+                r"C:\Program Files (x86)\FFmpeg\bin",
+
+                os.path.expanduser(r"~\ffmpeg\bin"),
+                os.path.expanduser(r"~\FFmpeg\bin"),
+                os.path.expanduser(r"~\AppData\Local\ffmpeg\bin"),
+                os.path.expanduser(r"~\AppData\Local\FFmpeg\bin"),
+                os.path.expanduser(r"~\AppData\Roaming\ffmpeg\bin"),
+                os.path.expanduser(r"~\AppData\Roaming\FFmpeg\bin"),
+
+                r"C:\ProgramData\chocolatey\bin",
+                r"C:\ProgramData\chocolatey\lib\ffmpeg\tools\ffmpeg\bin",
+
+                os.path.expanduser(r"~\scoop\shims"),
+                os.path.expanduser(r"~\scoop\apps\ffmpeg\current\bin"),
+                os.path.expanduser(
+                    r"~\AppData\Local\Microsoft\WinGet\Links"
+                ),
+            ]
+
+            #remove any potential duplicates
+            ffmpeg_dirs = list(dict.fromkeys(ffmpeg_dirs))
+            search_path = os.pathsep.join(ffmpeg_dirs)
+            ffmpeg = shutil.which("ffmpeg", path=search_path)
+        if not ffmpeg:
+            FreeCAD.Console.PrintNotification("FFMPEG not found, must be configured manually.")
+        else:
+            FreeCAD.Console.PrintNotification(f"FFMPEG found at: {ffmpeg}")
+        return ffmpeg
 
     def setupGifFolder(self,fp):
         """cleans up folder of any existing PNG and GIF files, creates folder if necessary"""
@@ -159,6 +242,8 @@ prop+".A41",prop+".A42",prop+".A43",prop+".A44"]
         if not fp.PathToFFMPEG:
             pg = FreeCAD.ParamGet("User parameter:Plugins/Animator_Macro")
             fp.PathToFFMPEG = pg.GetString("PathToFFMPEG","")
+            if not fp.PathToFFMPEG:
+                fp.PathToFFMPEG = self.find_ffmpeg()
             if not fp.PathToFFMPEG:
                 FreeCAD.Console.PrintError("You must set the path to FFMPEG in order to make the animated gif\n")
                 return False
@@ -832,7 +917,6 @@ class Camera:
         self.Position = pos
 
 
-
 class AnimatorVP:
     def __init__(self, obj):
         '''Set this object to the proxy object of the actual view provider'''
@@ -865,6 +949,14 @@ class AnimatorVP:
          text = "Edit Macro String"
          action = menu.addAction(text)
          action.triggered.connect(vobj.Object.Proxy.editMacroString)
+         text = "Find FFMPEG"
+         action = menu.addAction(text)
+         action.triggered.connect(self.find_ffmpeg)
+
+    def find_ffmpeg(self):
+        path = self.Object.Proxy.find_ffmpeg()
+        if path:
+            self.Object.PathToFFMPEG = path
 
     def updateData(self, fp, prop):
         '''If a property of the handled feature has changed we have the chance to handle this here'''
